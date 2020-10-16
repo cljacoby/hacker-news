@@ -1,0 +1,6 @@
+curl -X GET "https://hacker-news.firebaseio.com/v0/item/24770617.json?print=pretty"
+curl -X GET "https://hacker-news.firebaseio.com/v0/item/24777268.json?print=pretty"
+curl -X GET "https://hacker-news.firebaseio.com/v0/item/24780152.json?print=pretty"
+curl -X GET "https://hacker-news.firebaseio.com/v0/item/24778073.json?print=pretty"
+curl -X GET "https://hacker-news.firebaseio.com/v0/item/24777640.json?print=pretty"
+curl -X GET "https://hacker-news.firebaseio.com/v0/item/24775088.json?print=pretty"
