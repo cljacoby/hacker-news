@@ -10,7 +10,7 @@ Cargo.lock
 **/*.rs.bk
 
 # My additions
-/private/
+private/
 /data/*
 !/data/HNI_2018-05.small.json
 
