@@ -23,7 +23,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("Error: Received no id value.");
 
     let client = hnews::HNClient::new();
-    let _story = client.get_story_by_id(id)?;
+    let item = client.get_by_id(id)?;
+    println!("{:#?}", item);
     
     Ok(())
 }
