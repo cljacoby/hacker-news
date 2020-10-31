@@ -4,24 +4,43 @@ use std::fmt;
 use reqwest::Method;
 use serde::{self, Deserialize, Serialize};
 
-// TODO: Can score be negative?
-// Currently leaving as i64 to handle potential negative case.
-// Check the dump files for a negative score. 
 
 #[derive(Debug)]
 pub struct HNError {
     msg: String,
+    src: Option<Box<dyn Error + 'static>>,
 }
 
 impl fmt::Display for HNError {
+
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "msg: {}", self.msg) 
+        write!(f, "Error: {}", self.msg)
     }
 }
 
 impl Error for HNError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
+        self.src.as_ref().map(|e| e.as_ref())
+    }
+}
+
+impl HNError {
+
+    // fn fmt_error_chain(f: &mut fmt::Formatter<'_>, err: &(dyn Error + 'static)) -> fmt::Result {
+    //     write!(f, "\n")?;
+    //     match err.source() {
+    //         None => {},
+    //         Some(src) => {
+    //             HNError::fmt_error_chain(f, src)?;
+    //         }
+    //     }
+    //     Ok(())
+    // }
+
+    pub fn new(msg: String, src: Option<Box<dyn Error + 'static>>) -> Self {
+        Self {
+            msg, src
+        }
     }
 }
 
@@ -31,6 +50,7 @@ pub struct HNClient {
 }
 
 impl HNClient {
+    
     pub const BASE_URL: &'static str = "https://hacker-news.firebaseio.com";
 
     pub fn new() -> Self {
@@ -56,6 +76,11 @@ impl HNClient {
 // numeric Id. As of 10/31/2020 (boo!) 8:40 AM Eastern, the maximum ID value is 24'950_932.
 // It's conceivable that this Id may eventually need an u64. 
 pub type Id = u32;
+
+// Can score be negative?
+// Currently leaving as i64 to handle potential negative case.
+// Check the dump files for a negative score. 
+pub type Score = i64;
 
 #[derive(Serialize, Deserialize, Debug)]
     pub struct Job {
@@ -96,7 +121,7 @@ pub struct Story {
     /// In the case of stories or polls, the total comment count.
     pub descendants: Option<u32>,
     /// The story's score, or the votes for a pollopt.
-    pub score: Option<i64>,
+    pub score: Option<Score>,
     /// The title of the story, poll or job.
     pub title: Option<String>,
     /// The URL of the story.
@@ -142,7 +167,7 @@ pub struct Poll {
     /// In the case of stories or polls, the total comment count.
     pub descendants: Option<u32>,
     /// The story's score, or the votes for a pollopt.
-    pub score: Option<i64>,
+    pub score: Option<Score>,
     /// The title of the story, poll or job.
     pub title: Option<String>,
     /// The comment, story or poll text. HTML.
@@ -166,7 +191,7 @@ pub struct PollOption {
     /// The comment's parent: either another comment or the relevant story.
     pub parent: Option<Id>,
     /// The story's score, or the votes for a pollopt.
-    pub score: Option<i64>,
+    pub score: Option<Score>,
 }
 
 
@@ -188,7 +213,4 @@ pub enum Item {
 
 #[cfg(test)]
 mod tests {
-
-    use super::*;
-
 }
