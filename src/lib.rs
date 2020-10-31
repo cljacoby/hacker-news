@@ -64,7 +64,7 @@ pub type Id = u32;
     /// true if the item is deleted.
     pub deleted: Option<bool>,
     /// The username of the item's author.
-    pub by: String,
+    pub by: Option<String>,
     /// Creation date of the item, in Unix Time.
     pub time: u64,
     /// true if the item is dead.
@@ -86,7 +86,7 @@ pub struct Story {
     /// True if the item is deleted.
     pub deleted: Option<bool>,
     /// The type of item. One of "job", "story", "comment", "poll", or "pollopt".
-    pub by: String,
+    pub by: Option<String>,
     /// Creation date of the item, in Unix Time.
     pub time: u64,
     /// True if the item is dead.
@@ -96,9 +96,9 @@ pub struct Story {
     /// In the case of stories or polls, the total comment count.
     pub descendants: Option<u32>,
     /// The story's score, or the votes for a pollopt.
-    pub score: i64,
+    pub score: Option<i64>,
     /// The title of the story, poll or job.
-    pub title: String,
+    pub title: Option<String>,
     /// The URL of the story.
     pub url: Option<String>,
 }
@@ -110,7 +110,7 @@ pub struct Comment {
     /// true if the item is deleted.
     pub deleted: Option<bool>,
     /// The type of item. One of "job", "story", "comment", "poll", or "pollopt".
-    pub by: String,
+    pub by: Option<String>,
     /// Creation date of the item, in Unix Time.
     pub time: u64,
     /// true if the item is dead.
@@ -118,7 +118,7 @@ pub struct Comment {
     /// The ids of the item's comments, in ranked display order.
     pub kids: Option<Vec<Id>>,
     /// The comment's parent: either another comment or the relevant story.
-    pub parent: Id,
+    pub parent: Option<Id>,
     /// The comment, story or poll text. HTML.
     pub text: Option<String>,
 }
@@ -130,7 +130,7 @@ pub struct Poll {
     /// true if the item is deleted.
     pub deleted: Option<bool>,
     /// The type of item. One of "job", "story", "comment", "poll", or "pollopt".
-    pub by: String,
+    pub by: Option<String>,
     /// Creation date of the item, in Unix Time.
     pub time: u64,
     /// true if the item is dead.
@@ -138,15 +138,15 @@ pub struct Poll {
     /// The ids of the item's comments, in ranked display order.
     pub kids: Option<Vec<Id>>,
     /// A list of related pollopts, in display order.
-    pub parts: Vec<Id>,
+    pub parts: Option<Vec<Id>>,
     /// In the case of stories or polls, the total comment count.
     pub descendants: Option<u32>,
     /// The story's score, or the votes for a pollopt.
-    pub score: i64,
+    pub score: Option<i64>,
     /// The title of the story, poll or job.
-    pub title: String,
+    pub title: Option<String>,
     /// The comment, story or poll text. HTML.
-    pub text: String,
+    pub text: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -156,7 +156,7 @@ pub struct PollOption {
     /// true if the item is deleted.
     pub deleted: Option<bool>,
     /// The type of item. One of "job", "story", "comment", "poll", or "pollopt".
-    pub by: String,
+    pub by: Option<String>,
     /// Creation date of the item, in Unix Time.
     pub time: u64,
     /// true if the item is dead.
@@ -166,7 +166,7 @@ pub struct PollOption {
     /// The comment's parent: either another comment or the relevant story.
     pub parent: Option<Id>,
     /// The story's score, or the votes for a pollopt.
-    pub score: i64,
+    pub score: Option<i64>,
 }
 
 
