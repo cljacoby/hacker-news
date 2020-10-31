@@ -4,28 +4,18 @@ use std::fmt;
 use std::fs::File;
 use std::path::Path;
 use std::io::BufReader;
-use hnews::{Item};
+use hnews::{Item, HNError};
 use serde_json;
 use serde_json::Value;
 
+/*
+ * Using a full dump of HackerNews data from October 2006 to 
+ * May 2018 for testing. Files available from:
+ *
+ * https://files.pushshift.io/hackernews/
+ * */
+
 const TEST_DATA_DIR: &str = "./data";
-
-#[derive(Debug)]
-struct TestError {
-    msg: String,
-}
-
-impl fmt::Display for TestError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "msg: {}", self.msg) 
-    }
-}
-
-impl Error for TestError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
 
 #[test]
 fn integration_test() -> Result<(), Box<dyn Error>> {
