@@ -26,17 +26,6 @@ impl Error for HNError {
 
 impl HNError {
 
-    // fn fmt_error_chain(f: &mut fmt::Formatter<'_>, err: &(dyn Error + 'static)) -> fmt::Result {
-    //     write!(f, "\n")?;
-    //     match err.source() {
-    //         None => {},
-    //         Some(src) => {
-    //             HNError::fmt_error_chain(f, src)?;
-    //         }
-    //     }
-    //     Ok(())
-    // }
-
     pub fn new(msg: String, src: Option<Box<dyn Error + 'static>>) -> Self {
         Self {
             msg, src
