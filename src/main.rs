@@ -4,11 +4,11 @@ use std::error::Error;
 use std::thread;
 use std::time::Duration;
 
-use hnews::Comment;
+use hnews::models::Comment;
+use hnews::models::Id;
+use hnews::models::Item;
 use hnews::HNClient;
 use hnews::error::HNError;
-use hnews::Id;
-use hnews::Item;
 
 use clap::App;
 use clap::AppSettings;
