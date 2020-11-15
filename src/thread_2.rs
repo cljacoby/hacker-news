@@ -6,15 +6,27 @@ use crate::HNError;
 use crate::models::Id;
 use crate::models::Item;
 use crate::models::Comment;
+use crate::models::Story;
 
-struct ThreadIter {
+// pub trait Replies {}
+// impl Replies for Comment {}
+// impl Replies for Story {}
+
+pub struct RepliesIter {
     queue: VecDeque<Id>,
-    client: Box<HNClient>,
+    client: HNClient,
 }
 
-impl Iterator for ThreadIter {
+impl RepliesIter {
+    pub fn new(queue: VecDeque<Id>, client: HNClient) -> Self {
+        Self { queue, client }
+    } 
+}
+
+impl Iterator for RepliesIter {
     type Item = Result<Comment, Box<dyn Error>>;
 
+    // Breadth First Search iteration
     fn next(&mut self) -> Option<Self::Item> {
 
         // Pop Id from queue, return sentinal None if queue is exhausted

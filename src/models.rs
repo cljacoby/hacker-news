@@ -60,12 +60,6 @@ pub struct Story {
     pub url: Option<String>,
 }
 
-// impl Thread for Job {
-//     fn kids(&self) -> &Option<Vec<Id>> {
-//         &self.kids
-//     }
-// }
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Comment {
     // Fields directly obtained from the response payload
@@ -86,12 +80,6 @@ pub struct Comment {
     /// The comment, story or poll text. HTML.
     pub text: Option<String>,
 }
-
-// impl Thread for Comment {
-//     fn kids(&self) -> &Option<Vec<Id>> {
-//         &self.kids
-//     }
-// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Poll {

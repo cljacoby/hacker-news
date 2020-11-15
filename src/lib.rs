@@ -15,11 +15,16 @@ use error::HNError;
 pub mod thread;
 use thread::Thread;
 
+pub mod thread_2;
+use thread_2::RepliesIter;
+
 pub mod models;
 use models::Id;
-use models::Comment;
 use models::Item;
+use models::Comment;
+use models::Story;
 
+#[derive(Debug, Clone)]
 pub struct HNClient {
     // Using blocking for now becase its easier. Consider async client in the "future" (pun somewhat intended)
     client: reqwest::blocking::Client,
@@ -46,6 +51,13 @@ impl HNClient {
         println!("{:?}", story);
 
         Ok(story)
+    }
+
+    pub fn walk_comment_replies(&self, root: Comment) -> RepliesIter {
+        let mut queue = VecDeque::new();
+        queue.push_back(root.id);
+
+        RepliesIter::new(queue, self.clone())
     }
 
 }
@@ -75,5 +87,14 @@ mod tests {
             parent: Some(25015967),
             text: Some("On the data nerd side I continue to be shocked at how people misinterpret the certainty of polls&#x2F;forecasts. Forecasts give us probability distributions based on historical polling error data. Not infallible predictions the expected value will 100% happen.<p>It’s fairly revealing of society’s general innumeracy, just as it was 4 years ago when Trump won.".to_string()),
         }
+    }
+
+    #[test]
+    fn test_get() -> Result<(), Box<dyn Error>> {
+        let client = HNClient::new();
+        let story = client.get_by_id(100)?;
+        // client.get(Item::Story, 100);
+
+        Ok(())
     }
 }
