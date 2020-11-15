@@ -6,11 +6,18 @@ use crate::HNError;
 use crate::models::Id;
 use crate::models::Item;
 use crate::models::Comment;
-use crate::models::Story;
 
-// pub trait Replies {}
-// impl Replies for Comment {}
-// impl Replies for Story {}
+/*
+ * FIXME:
+ *  - RepliesIter should be obtained from the HNClient methods
+ *    `walk_story_replies`, and `walk_comment_replies`. Ideally,
+ *    this could be a single method generalized over both types
+ *  - When using `walk_story_replies` and `walk_comment_replies`,
+ *    the RepliesIter's current implementation wants to own its own
+ *    HNClient, and therefore the HNClient duplicates itself. Can
+ *    this be done with a reference, box, or container like Cell,
+ *    RefCell, etc.?
+ * */
 
 pub struct RepliesIter {
     queue: VecDeque<Id>,
@@ -71,4 +78,3 @@ impl Iterator for RepliesIter {
         Some(Ok(comment))
     }
 }
-

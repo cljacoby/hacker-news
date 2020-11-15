@@ -2,8 +2,6 @@ use serde;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::thread::Thread;
-
 // Id used to reference Items is a sequentially generated, non-negative
 // numeric Id. As of 10/31/2020 (boo!) 8:40 AM Eastern, the maximum ID value is 24'950_932.
 // It's conceivable that this Id may eventually need an u64.

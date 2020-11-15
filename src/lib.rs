@@ -1,22 +1,14 @@
 use std::collections::VecDeque;
 use std::error::Error;
-use std::iter::Iterator;
-// use std::iter::IntoIterator;
 
-use serde;
-use serde::Deserialize;
-use serde::Serialize;
 use log::debug;
 use reqwest::Method;
 
 pub mod error;
 use error::HNError;
 
-pub mod thread;
-use thread::Thread;
-
-pub mod thread_2;
-use thread_2::RepliesIter;
+pub mod replies_iter;
+use replies_iter::RepliesIter;
 
 pub mod models;
 use models::Id;
@@ -56,6 +48,17 @@ impl HNClient {
     pub fn walk_comment_replies(&self, root: Comment) -> RepliesIter {
         let mut queue = VecDeque::new();
         queue.push_back(root.id);
+
+        RepliesIter::new(queue, self.clone())
+    }
+
+    pub fn walk_story_replies(&self, root: Story) -> RepliesIter {
+        let mut queue = VecDeque::new();
+        if let Some(ref kids) = root.kids {
+            for kid in kids {
+                queue.push_back(*kid);
+            }
+        }
 
         RepliesIter::new(queue, self.clone())
     }
