@@ -1,10 +1,6 @@
-use std::collections::VecDeque;
 use std::env;
 use std::error::Error;
-use std::thread;
-use std::time::Duration;
 
-use hnews::models::Comment;
 use hnews::models::Id;
 use hnews::models::Item;
 use hnews::HNClient;
@@ -16,13 +12,11 @@ use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
 
-use serde_json;
-use serde_json::json;
 
 use env_logger;
 
 // Default timeout for request loops
-const TIMEOUT: u64 = 100;
+// const TIMEOUT: u64 = 100;
 
 fn init_logger() {
     #[allow(unused_variables)]
@@ -89,64 +83,45 @@ pub mod tree {
             .ok_or("Id is required for query")?
             .parse()?;
 
-        // Parse timeout. Obtain from `--timeout` argument, or else use default
-        let millis = match matches.value_of("timeout") {
-            None => TIMEOUT,
-            Some(millis) => millis.parse::<u64>().map_err(|src_err| {
-                HNError::new(
-                    format!("Could not parse timeout argument `{}`", millis),
-                    Some(Box::new(src_err)),
-                )
-            })?,
-        };
-        let timeout = Duration::from_millis(millis);
+        
+        // // Parse timeout. Obtain from `--timeout` argument, or else use default
+        // let millis = match matches.value_of("timeout") {
+        //     None => TIMEOUT,
+        //     Some(millis) => millis.parse::<u64>().map_err(|src_err| {
+        //         HNError::new(
+        //             format!("Could not parse timeout argument `{}`", millis),
+        //             Some(Box::new(src_err)),
+        //         )
+        //     })?,
+        // };
+        // let timeout = Duration::from_millis(millis);
 
         // Instantiate client, and retrieve top level story
         let client = HNClient::new();
-        let item = client.get_by_id(id)?;
-        let story = match item {
-            Item::Story(story) => Ok(story),
-            _ => {
-                let err = HNError::new(format!("Item id {} is not of type Story", id), None);
-
-                Err(err)
-            }
-        }?;
-
-        // TODO: It would be nice if the ID queue could accept all Item varaints,
-        // and handle accordingly.
-
-        // Create output sink for comments
-        let mut comments: Vec<Comment> = vec![];
-
-        // Queue used for BFS style tree traversal
-        let mut ids: VecDeque<Id> = VecDeque::new();
-        if let Some(kids) = story.kids.as_ref() {
-            for kid in kids.iter() {
-                ids.push_back(*kid);
-            }
-        }
-
-        // Pop an Id, get comment data, and push all child IDs to the queue
-        while let Some(id) = ids.pop_front() {
-            thread::sleep(timeout);
-            eprintln!("popped id = {}", id);
-            if let Item::Comment(comment) = client.get_by_id(id)? {
-                if let Some(kids) = comment.kids.as_ref() {
-                    for kid in kids.iter() {
-                        ids.push_back(*kid);
+        match client.get_by_id(id)? {
+            Item::Comment(comment) => {
+                for reply in client.walk_comment_replies(comment) {
+                    let reply = reply?;
+                    if let Some(text) = reply.text {
+                        println!("reply = {}", text);
                     }
                 }
-                comments.push(comment);
+            },
+            Item::Story(story) => {
+                for reply in client.walk_story_replies(story) {
+                    let reply = reply?;
+                    if let Some(text) = reply.text {
+                        println!("reply = {}", text);
+                    }
+                }
+            },
+            _ => {
+                let err = HNError::new(
+                    format!("Cannot only perform `tree` on Comments and Stories"),
+                    None);
+                return Err(Box::new(err))
             }
         }
-
-        let data = json!({
-            "story": story,
-            "comments": comments,
-        });
-        let s = serde_json::to_string(&data)?;
-        println!("{}", s);
 
         Ok(())
     }

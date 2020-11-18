@@ -9,14 +9,23 @@ use crate::models::Comment;
 
 /*
  * FIXME:
- *  - RepliesIter should be obtained from the HNClient methods
+ *  
+ *  - RepliesIter is obtained from the HNClient methods
  *    `walk_story_replies`, and `walk_comment_replies`. Ideally,
  *    this could be a single method generalized over both types
+ *  
  *  - When using `walk_story_replies` and `walk_comment_replies`,
  *    the RepliesIter's current implementation wants to own its own
  *    HNClient, and therefore the HNClient duplicates itself. Can
  *    this be done with a reference, box, or container like Cell,
  *    RefCell, etc.?
+ *
+ *  - In the original hacked up version in `main.rs` I had a timeout
+ *    between API request. Should there also be a timeout here?
+ *
+ *  - As a matter of understand-ability, the `next()` method is kind of
+ *    hard to visually follow. It would be nicer if I could define the
+ *    Error handling a little better so its less verbose
  * */
 
 pub struct RepliesIter {

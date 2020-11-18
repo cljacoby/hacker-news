@@ -40,7 +40,6 @@ impl HNClient {
         let text = self.client.request(Method::GET, &url).send()?.text()?;
         let story = serde_json::from_str(&text)?;
         debug!("{:?}", story);
-        println!("{:?}", story);
 
         Ok(story)
     }
