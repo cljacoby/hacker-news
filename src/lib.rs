@@ -48,7 +48,7 @@ impl HNClient {
         let mut queue = VecDeque::new();
         queue.push_back(root.id);
 
-        RepliesIter::new(queue, self.clone())
+        RepliesIter::new(queue, self)
     }
 
     pub fn walk_story_replies(&self, root: Story) -> RepliesIter {
@@ -59,7 +59,7 @@ impl HNClient {
             }
         }
 
-        RepliesIter::new(queue, self.clone())
+        RepliesIter::new(queue, self)
     }
 
 }

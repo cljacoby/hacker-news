@@ -28,18 +28,18 @@ use crate::models::Comment;
  *    Error handling a little better so its less verbose
  * */
 
-pub struct RepliesIter {
+pub struct RepliesIter<'clnt> {
     queue: VecDeque<Id>,
-    client: HNClient,
+    client: &'clnt HNClient,
 }
 
-impl RepliesIter {
-    pub fn new(queue: VecDeque<Id>, client: HNClient) -> Self {
+impl<'clnt> RepliesIter<'clnt> {
+    pub fn new(queue: VecDeque<Id>, client: &'clnt HNClient) -> Self {
         Self { queue, client }
     } 
 }
 
-impl Iterator for RepliesIter {
+impl<'clnt> Iterator for RepliesIter<'clnt> {
     type Item = Result<Comment, Box<dyn Error>>;
 
     // Breadth First Search iteration
