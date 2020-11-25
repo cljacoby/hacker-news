@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::error::Error;
 
 use log::debug;
@@ -13,8 +12,6 @@ use replies_iter::RepliesIter;
 pub mod models;
 use models::Id;
 use models::Item;
-use models::Comment;
-use models::Story;
 
 #[derive(Debug, Clone)]
 pub struct HNClient {
@@ -44,31 +41,18 @@ impl HNClient {
         Ok(story)
     }
 
-    pub fn walk_comment_replies(&self, root: Comment) -> RepliesIter {
-        let mut queue = VecDeque::new();
-        queue.push_back(root.id);
-
-        RepliesIter::new(queue, self)
+    pub fn iter_replies(&self, root: Id) -> Result<RepliesIter, Box<dyn Error>> {
+        Ok(RepliesIter::new(root, self)?)
     }
-
-    pub fn walk_story_replies(&self, root: Story) -> RepliesIter {
-        let mut queue = VecDeque::new();
-        if let Some(ref kids) = root.kids {
-            for kid in kids {
-                queue.push_back(*kid);
-            }
-        }
-
-        RepliesIter::new(queue, self)
-    }
-
 }
-
 
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    use std::error::Error;
+
+    use crate::models::Comment;
+    use crate::HNClient;
 
     fn get_comment() -> Comment {
         Comment {

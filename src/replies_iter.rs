@@ -1,42 +1,92 @@
 use std::collections::VecDeque;
 use std::error::Error;
 
-use crate::HNClient;
-use crate::HNError;
+use crate::models::Comment;
 use crate::models::Id;
 use crate::models::Item;
-use crate::models::Comment;
+use crate::models::Job;
+use crate::models::Poll;
+use crate::models::PollOption;
+use crate::models::Story;
+use crate::HNClient;
+use crate::HNError;
 
 /*
- * FIXME:
- *  
- *  - RepliesIter is obtained from the HNClient methods
- *    `walk_story_replies`, and `walk_comment_replies`. Ideally,
- *    this could be a single method generalized over both types
- *  
- *  - When using `walk_story_replies` and `walk_comment_replies`,
- *    the RepliesIter's current implementation wants to own its own
- *    HNClient, and therefore the HNClient duplicates itself. Can
- *    this be done with a reference, box, or container like Cell,
- *    RefCell, etc.?
- *
+ * TODO:
+ *  - Can/should the BFS order be optioned to also do DFS
  *  - In the original hacked up version in `main.rs` I had a timeout
  *    between API request. Should there also be a timeout here?
- *
- *  - As a matter of understand-ability, the `next()` method is kind of
- *    hard to visually follow. It would be nicer if I could define the
- *    Error handling a little better so its less verbose
  * */
 
+pub trait Replyable {
+    // I originally tried to define this method as returning either `dyn Iterator`
+    // or `impl Iterator`, but was getting compiler errors about not-being Sized
+    fn kids(&self) -> &Option<Vec<Id>>;
+}
+
+impl Replyable for Story {
+    fn kids(&self) -> &Option<Vec<Id>> {
+        &self.kids
+    }
+}
+impl Replyable for Comment {
+    fn kids(&self) -> &Option<Vec<Id>> {
+        &self.kids
+    }
+}
+impl Replyable for Poll {
+    fn kids(&self) -> &Option<Vec<Id>> {
+        &self.kids
+    }
+}
+impl Replyable for PollOption {
+    fn kids(&self) -> &Option<Vec<Id>> {
+        &self.kids
+    }
+}
+impl Replyable for Job {
+    fn kids(&self) -> &Option<Vec<Id>> {
+        &self.kids
+    }
+}
+
+#[derive(Debug)]
 pub struct RepliesIter<'clnt> {
     queue: VecDeque<Id>,
     client: &'clnt HNClient,
+    // root: Box<dyn Replyable>,
 }
 
+// impl<'clnt> fmt::Debug for RepliesIter<'clnt> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         f.debug_struct("RepliesIter")
+//          .field("queue", &self.queue)
+//          .field("client", &self.client)
+//          .finish()
+//     }
+// }
+
 impl<'clnt> RepliesIter<'clnt> {
-    pub fn new(queue: VecDeque<Id>, client: &'clnt HNClient) -> Self {
-        Self { queue, client }
-    } 
+    pub fn new(root: Id, client: &'clnt HNClient) -> Result<Self, Box<dyn Error>> {
+        let item = client.get_by_id(root)?;
+        let root = match item {
+            Item::Job(j) => Box::new(j) as Box<dyn Replyable>,
+            Item::Story(s) => Box::new(s) as Box<dyn Replyable>,
+            Item::Comment(c) => Box::new(c) as Box<dyn Replyable>,
+            Item::Poll(p) => Box::new(p) as Box<dyn Replyable>,
+            Item::PollOption(o) => Box::new(o) as Box<dyn Replyable>,
+        };
+
+        let mut queue = VecDeque::new();
+        if let Some(kids) = root.kids() {
+            for kid in kids {
+                queue.push_back(*kid);
+            }
+        }
+
+        // Ok(Self { queue, client, root })
+        Ok(Self { queue, client })
+    }
 }
 
 impl<'clnt> Iterator for RepliesIter<'clnt> {
@@ -44,27 +94,23 @@ impl<'clnt> Iterator for RepliesIter<'clnt> {
 
     // Breadth First Search iteration
     fn next(&mut self) -> Option<Self::Item> {
-
-        // Pop Id from queue, return sentinal None if queue is exhausted
+        // Pop Id from queue; return Iterator's sentinal None if queue is exhausted
         let id = match self.queue.pop_front() {
             None => return None,
             Some(id) => id,
         };
 
-        // Make request to HackerNews API to get this Id's Comment data
+        // Make request to HN API to get this Id's Comment data
         let resp = self.client.get_by_id(id);
         let comment = match resp {
-
             // If API request failed, return Error
             Err(src) => {
-                let err = HNError::new(
-                    format!("Request to HackerNews API failed"),
-                    Some(src),
-                );
-                return Some(Err(Box::new(err))); 
-            },
+                let err = HNError::new(format!("Request to HackerNews API failed"), Some(src));
+                return Some(Err(Box::new(err)));
+            }
 
-            // If API we got an Item, verify that it's a Comment variant, and extract inner Commnent
+            // The API method returns a generic item; verify that it's a Comment variant,
+            // and extract inner Comment instance
             Ok(item) => match item {
                 Item::Comment(comment) => comment,
                 _ => {
@@ -72,12 +118,12 @@ impl<'clnt> Iterator for RepliesIter<'clnt> {
                         format!("Thread iteration got non-Comment Item variant"),
                         None,
                     );
-                    return Some(Err(Box::new(err))); 
+                    return Some(Err(Box::new(err)));
                 }
-            } 
+            },
         };
 
-        // Enqueue this comment's childern comments 
+        // Enqueue this comment's childern comments
         if let Some(ref kids) = comment.kids {
             for kid in kids {
                 self.queue.push_back(*kid);

@@ -140,3 +140,5 @@ pub enum Item {
     PollOption(PollOption),
 }
 
+impl Item {
+}
