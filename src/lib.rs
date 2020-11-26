@@ -3,6 +3,8 @@ use std::error::Error;
 use log::debug;
 use reqwest::Method;
 
+pub mod html;
+
 pub mod error;
 use error::HNError;
 

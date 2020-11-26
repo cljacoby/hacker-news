@@ -1,4 +1,5 @@
-use hnews::{HNError, Item};
+use hnews::error::HNError;
+use hnews::models::Item;
 use serde_json;
 use serde_json::Value;
 use std::error::Error;

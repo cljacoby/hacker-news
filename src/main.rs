@@ -2,6 +2,7 @@ use std::env;
 use std::error::Error;
 
 use hnews::models::Id;
+use hnews::models::Comment;
 use hnews::HNClient;
 
 use clap::App;
@@ -77,11 +78,16 @@ pub mod tree {
             .ok_or("Id is required for query")?
             .parse()?;
 
+
         // Instantiate client, and retrieve comment data
+        let mut replies: Vec<Comment> = vec![];
         let client = HNClient::new();
         for reply in client.iter_replies(id)? {
-            println!("{:#?}", reply);
+            let reply = reply?;
+            replies.push(reply);
         }
+
+        println!("{:#?}", replies);
 
         Ok(())
     }
