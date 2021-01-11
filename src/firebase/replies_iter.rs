@@ -1,15 +1,15 @@
 use std::collections::VecDeque;
 use std::error::Error;
 
-use crate::models::Comment;
-use crate::models::Id;
-use crate::models::Item;
-use crate::models::Job;
-use crate::models::Poll;
-use crate::models::PollOption;
-use crate::models::Story;
-use crate::HNClient;
-use crate::HNError;
+use crate::firebase::models::Comment;
+use crate::firebase::models::Id;
+use crate::firebase::models::Item;
+use crate::firebase::models::Job;
+use crate::firebase::models::Poll;
+use crate::firebase::models::PollOption;
+use crate::firebase::models::Story;
+use crate::firebase::client::HNClient;
+use crate::error::HNError;
 
 /*
  * TODO:
@@ -105,8 +105,9 @@ impl<'clnt> Iterator for RepliesIter<'clnt> {
         let comment = match resp {
             // If API request failed, return Error
             Err(src) => {
-                let err = HNError::new(format!("Request to HackerNews API failed"), Some(src));
-                return Some(Err(Box::new(err)));
+                // let err = HNError::new(format!("Request to HackerNews API failed"), Some(src));
+                // return Some(Err(Box::new(err)));
+                return Some(Err(HNError::boxed_with_src("Request to HackerNews API failed", src)));
             }
 
             // The API method returns a generic item; verify that it's a Comment variant,
@@ -114,11 +115,7 @@ impl<'clnt> Iterator for RepliesIter<'clnt> {
             Ok(item) => match item {
                 Item::Comment(comment) => comment,
                 _ => {
-                    let err = HNError::new(
-                        format!("Thread iteration got non-Comment Item variant"),
-                        None,
-                    );
-                    return Some(Err(Box::new(err)));
+                    return Some(Err(HNError::boxed("Thread iteration got non-Comment Item variant")));
                 }
             },
         };

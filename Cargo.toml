@@ -12,8 +12,6 @@ path = "src/lib.rs"
 path = "src/main.rs"
 name = "hnews"
 
-[features]
-html = ["scraper"]
 
 [dependencies]
 clap = "2.33.0"
@@ -23,7 +21,15 @@ serde_with = "1.5.1"
 reqwest = { version = "0.10.7", features = ["blocking", "json", "cookies"] }
 log = "0.4.11"
 env_logger = "0.7.1"
+scraper = "0.12.0"
+lazy_static = "1.4.0"
+regex = "1.4.2"
 
-# dependencies for html feature
-scraper = { version = "0.12.0", optional = true }
 
+## Not sure if I should separate the HTML API Client vs. the
+## firebase client. Additionally, not sure if one should be
+## placed behind a feature flag. For now, I've just added the
+## HTML parsing library scraper as a dependancy.
+# [features]
+# html = ["scraper"]
+# scraper = { version = "0.12.0", optional = true }

@@ -1,5 +1,5 @@
 use hnews::error::HNError;
-use hnews::models::Item;
+use hnews::firebase::models::Item;
 use serde_json;
 use serde_json::Value;
 use std::error::Error;
@@ -50,15 +50,7 @@ fn integration_test() -> Result<(), Box<dyn Error>> {
     match err_count {
         0 => Ok(()),
         _ => {
-            let err = HNError::new(
-                format!(
-                    "Integrationt test failed with {} messages failed to parse",
-                    err_count
-                ),
-                None,
-            );
-
-            Err(Box::new(err))
+            return Err(HNError::boxed("Integration test failed with {} messages failed to parse"));
         }
     }
 }

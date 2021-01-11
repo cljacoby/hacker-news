@@ -20,7 +20,25 @@ impl Error for HNError {
 }
 
 impl HNError {
-    pub fn new(msg: String, src: Option<Box<dyn Error + 'static>>) -> Self {
-        Self { msg, src }
+    pub fn new(msg: &str, src: Option<Box<dyn Error + 'static>>) -> Self {
+        Self {
+            msg: msg.to_string(),
+            src
+        }
     }
+
+    pub fn boxed(msg: &str) -> Box<Self> {
+        Box::new(Self {
+            msg: msg.to_string(),
+            src: None,
+        })
+    }
+
+    pub fn boxed_with_src(msg: &str, src: Box<dyn Error>) -> Box<Self> {
+        Box::new(Self {
+            msg: msg.to_string(),
+            src: Some(src),
+        })
+    }
+
 }

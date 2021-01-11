@@ -1,9 +1,9 @@
 use std::env;
 use std::error::Error;
 
-use hnews::models::Id;
-use hnews::models::Comment;
-use hnews::HNClient;
+use hnews::firebase::models::Comment;
+use hnews::firebase::models::Id;
+use hnews::firebase::client::HNClient;
 
 use clap::App;
 use clap::AppSettings;
@@ -77,7 +77,6 @@ pub mod tree {
             .value_of("id")
             .ok_or("Id is required for query")?
             .parse()?;
-
 
         // Instantiate client, and retrieve comment data
         let mut replies: Vec<Comment> = vec![];
