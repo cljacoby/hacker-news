@@ -18,6 +18,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use crate::error::HNError;
 
+pub mod date;
 pub mod unauth_client;
 
 const LOGIN_URL: &'static str = "https://news.ycombinator.com/login";

@@ -2,119 +2,203 @@ use std::error::Error;
 use reqwest::blocking::Client;
 use scraper::Html;
 use scraper::Selector;
+use scraper::element_ref::Select;
 use scraper::ElementRef;
 use env_logger;
 use log;
+
+use std::sync::Once;
 
 use crate::html::init_logger;
 use crate::error::HNError;
 
 /* Note:
  *
- * Job posts do not have subtext fields like the author or score, and
- * therefore both the listing struct needs these as optional, and the
- * parsing logic needs to know how to recognize the absence.
- *
  * Consider how fields like `score` and `id` should be shared between
- * firebase and html client
+ * firebase and html clients
  *
+ * Selector::parse() returns an Error type which doesn't implement
+ * std::error::Error, and therefore doesn't work using Result<T, Box<dyn Error>>
+ * as a return type. Maybe open a pull request on the lib to implement
+ * std::error::Error.
+ *
+ * Because all the methods are implemented in a trait, there is no concept
+ * of public vs. private. Maybe consider not using the trait? Or maybe
+ * consider not having seperate structs for auth and unauth
  * */
 
+
+/* Todo:
+ *
+ * Add a `comment` attribute to the Listing struct, and have it be the comment
+ * count displayed on a Listing.
+ *
+ * If Item and Struct are basically all the same information, consider representing
+ * them as a single struct.
+ *
+ * Consider placing all HTML parsing logic into the `extract` function
+ * */
+
+type Score=u32;
+type Id=u32;
+
 #[derive(Debug)]
-struct HNListig {
+struct Listing {
     title: String,
-    id: u64,
-    score: Option<u32>,
+    id: Id,
+    score: Option<Score>,
     user: Option<String>,
-    comments: u32,
+    // comments: u32,
     url: String,
 }
 
 const FRONT_PAGE: &'static str = "https://news.ycombinator.com";
 
-// const QUERYSEL_TITLE: &'static str = "td.title > a";
-// const QUERYSEL_SUBTEXT: &'static str = "td.title > a";
 
 
-fn extract_hn_listing(
-    title_node: ElementRef,
-    subtext_node: ElementRef
-) -> HNListig {
+fn extract_listings(html: Html) -> Result<Vec<Listing>, Box<dyn Error>> {
 
+    /* Note:
+     * The :not clause in selector_title is to obtain only the html representing
+     * listings, and not also the html representing comments. The need for this
+     * makes me wonder if there is a better way to extract expected HTML into an
+     * expected struct.
+     * */
 
-    unimplemented!();
+    // Selectors applied to root html node to locate title nodes 
+    let selector_title = Selector::parse("tr.athing:not(.comtr)").unwrap();
+
+    // Selectors applied to title node
+    let selector_titlelink = Selector::parse("td.title > a.storylink").unwrap();
+    let selector_sitebit = Selector::parse("td.title > span.sitebit.comhead > a").unwrap();
+
+    // Selectors applied to the subtext node
+    let selector_score = Selector::parse("span.score").unwrap();
+    let selector_user = Selector::parse("a.hnuser").unwrap();
+
+    // Parse each HTML listing into a Listing instance
+    let nodes = html.select(&selector_title);
+    let mut listings: Vec<Listing> = Vec::new(); 
+    for title_node in nodes {
+
+        // Note: The subtext node is assumed to be the next adjacent sibling
+        // node from a given title node. There are no other distintive HTML
+        // patterns which capture this node.
+        let subtext_node = title_node.next_sibling()
+            .ok_or("Could not find subtext node as next sibling of title node.")?;
+        let subtext_node = ElementRef::wrap(subtext_node)
+            .ok_or("Could not wrap subtext node in ElementRef")?;
+
+        // Obtain the user, if it exists
+        let user = match subtext_node.select(&selector_user).next() {
+            None => None,
+            Some(user_node) => {
+                Some(user_node.text()
+                    .next()
+                    .ok_or("User node found, but failed to obtain inner text")?
+                    .to_string()
+                )}
+        };
+
+        // Obtain the score, if it exists
+        let score = match subtext_node.select(&selector_score).next() {
+            None => None,
+            Some(score_node) => {
+                Some(score_node.text()
+                    .next()
+                    .ok_or("Score node found, but failed to obtain inner text")?
+                    .strip_suffix(" points")
+                    .ok_or("failed to strip points suffix ' points'")?
+                    .parse::<Score>()?
+                )}
+        };
+
+        // Obtain the title, URL, and HackerNews item ID. These should always exist.
+        let title_el = title_node.select(&selector_titlelink)
+            .next()
+            .ok_or("title query selector got no matches")?;
+        let title = title_el
+            .text()
+            .next()
+            .ok_or("Could not get inner text for score HTML element")?
+            .to_string();
+        let url = title_el
+            .value()
+            .attr("href")
+            .ok_or("Title link had missing 'href' attribute")?
+            .to_string();
+        let id = title_node
+            .value()
+            .id()
+            .ok_or("Title node did not have HTML Id attribute")?
+            .parse::<Id>()?;
+
+        listings.push(Listing {
+            title,
+            id,
+            score,
+            user,
+            url
+        });
+    }
+
+    Ok(listings)
 }
+
 
 trait UnauthOps {
 
+    /* public methods */
+
+    fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
+        self.get_listings(FRONT_PAGE)
+    }
+    
+    fn item(&self, id: Id) -> Result<Listing, Box<dyn Error>> {
+        // Retrieve front page HTML
+        let url = format!("https://news.ycombinator.com/item?id={}", id);
+        let client = self.http_client();
+        let req = client.get(&url);
+        let resp = req.send()?;
+        let text = resp.text()?;
+        let html = Html::parse_document(&text);
+
+        // Note: There is an assumption here that given an item ID, we should
+        // only extract one listing from a page. Therefore, we can simply pop once
+        // from the Vec obtained by extract listings.
+
+        let item = extract_listings(html)?
+            .pop()
+            .ok_or(format!("Did not find item {}", id))?;
+
+        Ok(item)
+    }
+
+    fn front(&self, date: Option<String>) -> Result<Listing, Box<dyn Error>> {
+
+
+
+        unimplemented!()
+    }
+
+
+    
+    /* private methods */
+
     fn http_client(&self) -> &Client;
 
-    fn front_page(&self) -> Result<(), Box<dyn Error>> {
-
+    fn get_listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
         // Retrieve front page HTML
         let client = self.http_client();
-        let req = client.get(FRONT_PAGE);
+        let req = client.get(url);
         let resp = req.send()?;
-        let html = resp.text()?;
-        let dom = Html::parse_document(&html);
+        let text = resp.text()?;
+        let html = Html::parse_document(&text);
+        let listings = extract_listings(html)?;
 
-        let selector_top = Selector::parse("table.itemlist tr.athing")
-            .expect("Failed to parse scraper Selector (listing)");
-
-        let select_title = Selector::parse("td.title a.storylink")
-            .expect("Failed to parse scraper Selector (title)");
-        
-        // Use the next sibling of the <tr.athing> as root node
-        let select_subtext_score = Selector::parse("span.score")
-            .expect("Failed to parse scraper Selector (score)");
-        let select_subtext_user = Selector::parse("a.hnuser")
-            .expect("Failed to parse scraper Selector (user)");
-
-        // Parse HTML into Vec of HNListigs
-        let nodes: Vec<ElementRef> = dom.select(&selector_top).collect();
-        let hn_listings: Vec<HNListig> = Vec::new();
-        
-        for node in nodes {
-            let element = node.value();
-
-
-            let subtext_node = match node.next_sibling() {
-                None => {
-                    return Err(HNError::boxed("Could not find subtext as next sibling of title node."));
-                },
-                Some(subtext_node) => subtext_node,
-            };
-            let subtext_el = ElementRef::wrap(subtext_node).unwrap();
-            // TODO: Replace with actual error handling
-            let user_el: ElementRef = subtext_el.select(&select_subtext_user).next().unwrap();
-            let user = user_el.text().next().unwrap();
-            let score_el: ElementRef = subtext_el.select(&select_subtext_score).next().unwrap();
-            let score = score_el.text().next().unwrap();
-
-
-            let title_node = match node.select(&select_title).next() {
-                None => return Err(HNError::boxed("Did not find HTML title for listing.")),
-                Some(title_node) => title_node,
-            };
-            
-
-            let id = element.id();
-            let title_el = title_node.value();
-            let title = title_node.text().next();
-            let url = title_el.attr("href");
-
-            println!("id = {:?}", id);
-            println!("title = {:?}", title);
-            println!("url = {:?}", url);
-            println!("user = {:?}", user);
-            println!("score = {:?}", score);
-            println!("*******************")
-        }
-
-
-        
-        Ok(())
+        Ok(listings)
     }
+
 
 }
 
@@ -140,13 +224,30 @@ impl UnauthClient {
 mod tests {
 
     use super::*;
+    static LOG_INIT: Once = Once::new(); 
+    
+    fn setup() {
+        LOG_INIT.call_once(|| {
+            init_logger()
+        });
+    }
 
     #[test]
-    fn test_front_page() -> Result<(), Box<dyn Error>> {
-        // env_logger::init();
-        init_logger();
+    fn test_news() -> Result<(), Box<dyn Error>> {
+        setup();
         let client = UnauthClient::new();
-        client.front_page()?;
+        let listings = client.news()?;
+        log::debug!("test_news listings = {:#?}", listings);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_item() -> Result<(), Box<dyn Error>> {
+        setup();
+        let client = UnauthClient::new();
+        let item = client.item(25925926)?;
+        log::debug!("test_item item = {:#?}", item);
 
         Ok(())
     }
