@@ -18,6 +18,7 @@ fn init_logger() {
     let logger = env_logger::init();
 }
 
+// Query an item by the itemId
 pub mod query {
 
     use super::*;
@@ -47,6 +48,7 @@ pub mod query {
     }
 }
 
+// For a comment-able item, retireve all the comments
 pub mod tree {
 
     use super::*;
