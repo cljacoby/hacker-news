@@ -2,7 +2,7 @@ use hnews::error::HNError;
 use hnews::firebase::models::Item;
 use serde_json;
 use serde_json::Value;
-use std::error::Error;
+use std::{error::Error, unimplemented};
 use std::fmt;
 use std::fs;
 use std::fs::File;
@@ -18,6 +18,7 @@ use std::path::Path;
 
 const TEST_DATA_DIR: &str = "./data";
 
+#[ignore]
 #[test]
 fn integration_test() -> Result<(), Box<dyn Error>> {
     let mut err_count = 0;
