@@ -5,7 +5,9 @@ use log;
 use log::LevelFilter;
 
 pub mod client;
-
+pub mod config;
+pub mod parse;
+pub mod models;
 
 pub fn init_logger() {
     let mut logger = Builder::from_default_env();

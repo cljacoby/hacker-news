@@ -11,14 +11,47 @@ use hnews::firebase::models::Comment;
 use hnews::firebase::models::Id;
 use hnews::firebase::client::HNClient;
 use hnews::html::client::Client;
-use hnews::html::client::Listing;
+use hnews::html::models::Listing;
+
+use hnews::html::config::HNConfig;
 
 fn init_logger() {
     #[allow(unused_variables)]
     env_logger::init();
 }
 
-/// Query an item by the itemId
+/// Query an item by the itemId. Uses firebase client.
+pub mod _query {
+
+    use super::*;
+
+    pub const NAME: &'static str = "_query";
+
+    pub fn parser<'a, 'b>() -> App<'a, 'b> {
+        SubCommand::with_name(_query::NAME).arg(
+            Arg::with_name("id")
+                .value_name("id")
+                .required(true)
+                .takes_value(true)
+                .min_values(1),
+        )
+    }
+
+    pub fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+        let id = match matches.value_of("id") {
+            None => unreachable!("clap will require an argument value"),
+            Some(id) => id,
+        };
+        let id: Id = id.parse()?;
+
+        let client = HNClient::new();
+        let resp = client.get_by_id(id)?;
+        println!("{:#?}", resp);
+
+        Ok(())
+    }
+}
+
 pub mod query {
 
     use super::*;
@@ -42,12 +75,16 @@ pub mod query {
         };
         let id: Id = id.parse()?;
 
-        let client = HNClient::new();
-        let resp = client.get_by_id(id)?;
-        println!("{:#?}", resp);
+        let client = Client::new("test", "test");
+        let item = client.item(id)?;
+        println!("item = {:#?}", item);
+
+        let comments = client._comments(id)?;
+        println!("comments = {:#?}", comments);
 
         Ok(())
     }
+
 }
 
 /// For a comment-able item, retrieve all the comments
@@ -182,8 +219,7 @@ pub mod login {
         .value_of("password")
         .ok_or("password is required for login")?;
         
-        // TODO: Having to make this mutable is not ideal
-        let mut client = Client::new(username, password);
+        let client = Client::new(username, password);
         client.login()?;
 
         Ok(())
@@ -200,6 +236,7 @@ pub mod hn {
         App::new("hnews")
             .setting(AppSettings::ArgRequiredElseHelp)
             .subcommand(query::parser())
+            .subcommand(_query::parser())
             .subcommand(tree::parser())
             .subcommand(news::parser())
             .subcommand(login::parser())
@@ -210,6 +247,7 @@ pub mod hn {
 
         match matches.subcommand() {
             (query::NAME, Some(matches)) => query::cmd(matches),
+            (_query::NAME, Some(matches)) => _query::cmd(matches),
             (tree::NAME, Some(matches)) => tree::cmd(matches),
             (news::NAME, Some(matches)) => news::cmd(matches),
             (login::NAME, Some(matches)) => login::cmd(matches),

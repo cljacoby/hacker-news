@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest;
-use reqwest::blocking::Client as ReqwestClient;
+// use reqwest::blocking::Client as ReqwestClient;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::HeaderValue;
 use reqwest::header::HeaderMap;
@@ -20,6 +20,14 @@ use log;
 use log::LevelFilter;
 use crate::html::init_logger;
 use crate::error::HNError;
+use crate::html::parse::extract_listings;
+use crate::html::parse::extract_comment_tree;
+use crate::html::parse::extract_fnid;
+use crate::html::models::Score;
+use crate::html::models::Id;
+use crate::html::models::Listing;
+use crate::html::models::Date;
+use crate::html::models::Comment;
 
 /* Note:
  *
@@ -56,26 +64,26 @@ lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
 }
 
-pub type Score=u32;
-pub type Id=u32;
+// pub type Score=u32;
+// pub type Id=u32;
 
-pub struct Date(pub u16, pub u8, pub u8);
+// pub struct Date(pub u16, pub u8, pub u8);
 
-#[derive(Debug)]
-pub struct Listing {
-    pub title: String,
-    pub id: Id,
-    pub score: Option<Score>,
-    pub user: Option<String>,
-    // comments: u32,
-    pub url: String,
-}
+// #[derive(Debug)]
+// pub struct Listing {
+//     pub title: String,
+//     pub id: Id,
+//     pub score: Option<Score>,
+//     pub user: Option<String>,
+//     // comments: u32,
+//     pub url: String,
+// }
 
 pub struct Client {
     http_client: reqwest::blocking::Client,
     username: String,
     password: String,
-    cookie: Option<(String, String)>,
+    cookie: RefCell<Option<(String, String)>>,
 }
 
 impl Client {
@@ -84,8 +92,8 @@ impl Client {
         Self {
             username: String::from(username),
             password: String::from(password),
-            http_client: ReqwestClient::new(),
-            cookie: None,
+            http_client: reqwest::blocking::Client::new(),
+            cookie: RefCell::new(None),
         }
     }
 
@@ -93,8 +101,8 @@ impl Client {
         HNError::boxed("Cannot perform action because client is unauthenticated")
     }
 
-    fn encode_user_cooke(&self) -> Result<String, Box<dyn Error>> {
-        match self.cookie {
+    fn cookie(&self) -> Result<String, Box<dyn Error>> {
+        match *self.cookie.borrow() {
             None => Err(self.fail_unauthenticated()),
             Some(ref cookie) => Ok(format!("{}={};", cookie.0, cookie.1))
         }
@@ -107,7 +115,7 @@ impl Client {
         text: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
 
-        if self.cookie.is_none() {
+        if self.cookie.borrow().is_none() {
             return Err(self.fail_unauthenticated());
         }
 
@@ -119,7 +127,7 @@ impl Client {
         log::debug!("submit post body = {:?}", formdata);
         formdata.insert("title", title);
         
-        let cookie: HeaderValue = self.encode_user_cooke()?.parse().unwrap();
+        let cookie: HeaderValue = self.cookie()?.parse().unwrap();
         let req = self.http_client.post(URL_SUBMIT)
             .header("Cookie", cookie)
             .form(&formdata);
@@ -132,11 +140,11 @@ impl Client {
     }
     
     fn get_fnid(&self) -> Result<String, Box<dyn Error>> {
-        if self.cookie.is_none() {
+        if self.cookie.borrow().is_none() {
             return Err(self.fail_unauthenticated());
         }
     
-        let cookie: HeaderValue = self.encode_user_cooke()?.parse().unwrap();
+        let cookie: HeaderValue = self.cookie()?.parse().unwrap();
         let req = self.http_client
             .get(URL_SUBMIT_FORM)
             .header("Cookie", cookie);
@@ -167,7 +175,7 @@ impl Client {
         Ok(fnid)
     }
 
-    pub fn login(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn login(&self) -> Result<(), Box<dyn Error>> {
         
         // Create form-data body parameters
         let mut formdata = HashMap::new();
@@ -182,6 +190,7 @@ impl Client {
 
         // Login request requires no redirect on response, therefore we build a 
         // new one rather than referencing self.http_client.
+        // TODO: Is there a better way to accomodate this?
         let client = ClientBuilder::new()
             .redirect(Policy::none())
             .build()?;
@@ -198,7 +207,10 @@ impl Client {
         let cookies: Vec<Cookie> = resp.cookies().collect();
         let cookie = cookies.get(0)
             .ok_or("Unable to retrieve user cookie")?;
-        self.cookie = Some((cookie.name().to_string(), cookie.value().to_string()));
+        let cookie = Some((cookie.name().to_string(), cookie.value().to_string()));
+
+        // Store on client instance field
+        *self.cookie.borrow_mut() = cookie;
         println!("cookie = {:?}", self.cookie);
 
         Ok(())
@@ -216,11 +228,22 @@ impl Client {
         // only extract one listing from a page. Therefore, we can simply pop once
         // from the Vec obtained by extract listings.
 
-        let item = extract_listings(html)?
+        let item = extract_listings(&html)?
             .pop()
             .ok_or(format!("Did not find item {}", id))?;
 
         Ok(item)
+    }
+
+    pub fn _comments(&self, id: Id) -> Result<Vec<Comment>, Box<dyn Error>> {
+        let url = format!("https://news.ycombinator.com/item?id={}", id);
+        let req = self.http_client.get(&url);
+        let resp = req.send()?;
+        let text = resp.text()?;
+        let html = Html::parse_document(&text);
+        let comments = extract_comment_tree(&html)?;
+        
+        Ok(comments)
     }
 
     pub fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
@@ -248,12 +271,13 @@ impl Client {
         let resp = req.send()?;
         let text = resp.text()?;
         let html = Html::parse_document(&text);
-        let listings = extract_listings(html)?;
+        let listings = extract_listings(&html)?;
 
         Ok(listings)
     }
 
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -287,120 +311,16 @@ mod tests {
         Ok(())
     }
 
-}
+    #[test]
+    fn test_login() -> Result<(), Box<dyn Error>> {
+        let user: String = std::env::var("HN_USER")?;
+        let pwd: String = std::env::var("HN_PASS")?;
+        println!("user = {:?}", user);
+        println!("pwd = {:?}", pwd);
+        let mut client = Client::new(&user, &pwd);
+        client.login()?;
 
-// =============================================================================
-// =============================================================================
-// =============================================================================
-// HTML Parsing Helpers
-
-fn extract_listings(html: Html) -> Result<Vec<Listing>, Box<dyn Error>> {
-
-    /* Note:
-     * The ':not' clause in selector_title is to obtain only the html representing
-     * listings, and not also the html representing comments. The need for this
-     * makes me wonder if there is a better way to extract expected HTML into a
-     * struct.
-     * */
-
-    // Selectors applied to root html node to locate title nodes 
-    let selector_title = Selector::parse("tr.athing:not(.comtr)").unwrap();
-
-    // Selectors applied to title node
-    let selector_titlelink = Selector::parse("td.title > a.storylink").unwrap();
-    let selector_sitebit = Selector::parse("td.title > span.sitebit.comhead > a").unwrap();
-
-    // Selectors applied to the subtext node
-    let selector_score = Selector::parse("span.score").unwrap();
-    let selector_user = Selector::parse("a.hnuser").unwrap();
-
-    // Parse each HTML listing into a Listing instance
-    let nodes = html.select(&selector_title);
-    let mut listings: Vec<Listing> = Vec::new(); 
-    for title_node in nodes {
-
-        /* Note:
-         * The subtext node is assumed to be the next adjacent sibling
-         * node from a given title node. There are no other distinguishing HTML
-         * patterns with which to capture this node.
-         * */
-        let subtext_node = title_node.next_sibling()
-            .ok_or("Could not find subtext node as next sibling of title node.")?;
-        let subtext_node = ElementRef::wrap(subtext_node)
-            .ok_or("Could not wrap subtext node in ElementRef")?;
-
-        // Obtain the user, if it exists
-        let user = match subtext_node.select(&selector_user).next() {
-            None => None,
-            Some(user_node) => {
-                Some(user_node.text()
-                    .next()
-                    .ok_or("User node found, but failed to obtain inner text")?
-                    .to_string()
-                )}
-        };
-
-        // Obtain the score, if it exists
-        let score = match subtext_node.select(&selector_score).next() {
-            None => None,
-            Some(score_node) => {
-                Some(score_node.text()
-                    .next()
-                    .ok_or("Score node found, but failed to obtain inner text")?
-                    .strip_suffix(" points")
-                    .ok_or("failed to strip points suffix ' points'")?
-                    .parse::<Score>()?
-                )}
-        };
-
-        // Obtain the title, URL, and HackerNews item ID. These should always exist.
-        let title_el = title_node.select(&selector_titlelink)
-            .next()
-            .ok_or("title query selector got no matches")?;
-        let title = title_el
-            .text()
-            .next()
-            .ok_or("Could not get inner text for score HTML element")?
-            .to_string();
-        let url = title_el
-            .value()
-            .attr("href")
-            .ok_or("Title link had missing 'href' attribute")?
-            .to_string();
-        let id = title_node
-            .value()
-            .id()
-            .ok_or("Title node did not have HTML Id attribute")?
-            .parse::<Id>()?;
-
-        listings.push(Listing {
-            title,
-            id,
-            score,
-            user,
-            url
-        });
+        Ok(())
     }
 
-    Ok(listings)
-}
-
-fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn std::error::Error>> {
-    let text = el.html();
-    let captures = match FNID_REGEX.captures(&text) {
-        Some(captures) => captures,
-        None => {
-            return Err(HNError::boxed("Fnid regex failed to process input HMTL text"));
-        }
-    };
-    let fnid = match captures.get(1) {
-        Some(fnid) => {
-            fnid.as_str().to_string()
-        },
-        None => {
-            return Err(HNError::boxed("Fnid capture group prouced no matches"));
-        }
-    };
-
-    Ok(fnid)
 }
