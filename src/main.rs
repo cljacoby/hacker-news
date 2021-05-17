@@ -7,9 +7,7 @@ use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
 use env_logger;
-use hnews::firebase::models::Comment;
-use hnews::firebase::models::Id;
-use hnews::firebase::client::HNClient;
+use hnews::html::models::Id;
 use hnews::html::client::Client;
 use hnews::html::models::Listing;
 use hnews::html::config::HNConfig;
@@ -17,38 +15,6 @@ use hnews::html::config::HNConfig;
 fn init_logger() {
     #[allow(unused_variables)]
     env_logger::init();
-}
-
-/// Query an item by the itemId. Uses firebase client.
-pub mod _query {
-
-    use super::*;
-
-    pub const NAME: &'static str = "_query";
-
-    pub fn parser<'a, 'b>() -> App<'a, 'b> {
-        SubCommand::with_name(_query::NAME).arg(
-            Arg::with_name("id")
-                .value_name("id")
-                .required(true)
-                .takes_value(true)
-                .min_values(1),
-        )
-    }
-
-    pub fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-        let id = match matches.value_of("id") {
-            None => unreachable!("clap will require an argument value"),
-            Some(id) => id,
-        };
-        let id: Id = id.parse()?;
-
-        let client = HNClient::new();
-        let resp = client.get_by_id(id)?;
-        println!("{:#?}", resp);
-
-        Ok(())
-    }
 }
 
 pub mod query {
@@ -120,17 +86,17 @@ pub mod tree {
             .ok_or("Id is required for query")?
             .parse()?;
 
+        
         // Instantiate client, and retrieve comment data
-        let mut replies: Vec<Comment> = vec![];
-        let client = HNClient::new();
-        for reply in client.iter_replies(id)? {
-            let reply = reply?;
-            replies.push(reply);
-        }
-
-        println!("{:#?}", replies);
-
-        Ok(())
+        // let mut replies: Vec<Comment> = vec![];
+        // let client = HNClient::new();
+        // for reply in client.iter_replies(id)? {
+        //     let reply = reply?;
+        //     replies.push(reply);
+        // }
+        // println!("{:#?}", replies);
+        // Ok(())
+        unimplemented!("Re-implement this with HTML based client");
     }
 }
 
@@ -227,7 +193,6 @@ pub mod hn {
     pub fn parser<'a, 'b>() -> App<'a, 'b> {
         App::new("hnews")
             .subcommand(query::parser())
-            .subcommand(_query::parser())
             .subcommand(tree::parser())
             .subcommand(news::parser())
             .subcommand(login::parser())
@@ -238,7 +203,6 @@ pub mod hn {
 
         match matches.subcommand() {
             (query::NAME, Some(matches)) => query::cmd(matches),
-            (_query::NAME, Some(matches)) => _query::cmd(matches),
             (tree::NAME, Some(matches)) => tree::cmd(matches),
             (news::NAME, Some(matches)) => news::cmd(matches),
             (login::NAME, Some(matches)) => login::cmd(matches),
