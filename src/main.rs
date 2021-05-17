@@ -7,10 +7,10 @@ use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
 use env_logger;
-use hnews::html::models::Id;
-use hnews::html::client::Client;
-use hnews::html::models::Listing;
-use hnews::html::config::HNConfig;
+use hnews::models::Id;
+use hnews::client::Client;
+use hnews::models::Listing;
+use hnews::config::HNConfig;
 
 fn init_logger() {
     #[allow(unused_variables)]

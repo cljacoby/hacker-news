@@ -2,17 +2,18 @@ use std::error::Error;
 use std::collections::VecDeque;
 use lazy_static::lazy_static;
 use regex::Regex;
+use scraper;
 use scraper::Html;
 use scraper::Selector;
 use scraper::element_ref::Select;
 use scraper::ElementRef;
 use log;
-use crate::html::models::Score;
-use crate::html::models::Id;
-use crate::html::models::Listing;
-use crate::html::models::Date;
-use crate::html::models::Comment;
-use crate::html::get_test_text;
+use crate::models::Score;
+use crate::models::Id;
+use crate::models::Listing;
+use crate::models::Date;
+use crate::models::Comment;
+use crate::get_test_text;
 use crate::error::HNError;
 
 lazy_static! {

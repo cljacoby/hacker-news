@@ -10,6 +10,7 @@ use reqwest::header::HeaderValue;
 use reqwest::header::HeaderMap;
 use reqwest::cookie::Cookie;
 use reqwest::redirect::Policy;
+use scraper;
 use scraper::Html;
 use scraper::Selector;
 use scraper::element_ref::Select;
@@ -17,17 +18,17 @@ use scraper::ElementRef;
 use env_logger;
 use log;
 use log::LevelFilter;
-use crate::html::init_logger;
+use crate::init_logger;
 use crate::error::HNError;
-use crate::html::parse::extract_listings;
-use crate::html::parse::extract_comments;
-use crate::html::parse::extract_fnid;
-use crate::html::parse::create_comment_tree;
-use crate::html::models::Score;
-use crate::html::models::Id;
-use crate::html::models::Listing;
-use crate::html::models::Date;
-use crate::html::models::Comment;
+use crate::parse::extract_listings;
+use crate::parse::extract_comments;
+use crate::parse::extract_fnid;
+use crate::parse::create_comment_tree;
+use crate::models::Score;
+use crate::models::Id;
+use crate::models::Listing;
+use crate::models::Date;
+use crate::models::Comment;
 
 /* Note:
  *
