@@ -2,6 +2,7 @@
 pub type Score=u32;
 pub type Id=u32;
 
+#[derive(Debug)]
 pub struct Date(pub u16, pub u8, pub u8);
 
 #[derive(Debug)]
@@ -21,4 +22,12 @@ pub struct Comment {
     pub text: String,
     pub indent: i32,
     // pub bool: deleted,
+    pub children: Vec<Comment>,
 }
+
+// #[derive(Debug)]
+// pub struct CommentNode {
+//     pub comment: Comment,
+//     pub children: Vec<Comment>,
+// }
+

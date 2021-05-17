@@ -5,7 +5,6 @@ use std::cell::RefCell;
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest;
-// use reqwest::blocking::Client as ReqwestClient;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::HeaderValue;
 use reqwest::header::HeaderMap;
@@ -21,8 +20,9 @@ use log::LevelFilter;
 use crate::html::init_logger;
 use crate::error::HNError;
 use crate::html::parse::extract_listings;
-use crate::html::parse::extract_comment_tree;
+use crate::html::parse::extract_comments;
 use crate::html::parse::extract_fnid;
+use crate::html::parse::create_comment_tree;
 use crate::html::models::Score;
 use crate::html::models::Id;
 use crate::html::models::Listing;
@@ -235,37 +235,40 @@ impl Client {
         Ok(item)
     }
 
+    // TODO: I don't love this with respect to API ergonomics. Refactor this functionality
+    // in to something more well connected to the actual data model (i.e. posts,
+    // comments, users, etc.)
     pub fn _comments(&self, id: Id) -> Result<Vec<Comment>, Box<dyn Error>> {
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
         let resp = req.send()?;
         let text = resp.text()?;
         let html = Html::parse_document(&text);
-        let comments = extract_comment_tree(&html)?;
+        let comments = extract_comments(&html)?;
+        let comment_tree = create_comment_tree(comments);
         
-        Ok(comments)
+        Ok(comment_tree)
     }
 
     pub fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
         self.listings("https://news.ycombinator.com/news")
     }
 
-    pub fn front(&self, date: Option<Date>) -> Result<Vec<Listing>, Box<dyn Error>> {
-        let url = match date {
-            None => "https://news.ycombinator.com/front".to_string(),
-            Some(d) => format!("https://news.ycombinator.com/front?day={}-{}-{}", d.0, d.1, d.2),
-        };
+    pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<dyn Error>> {
+        let url = format!("https://news.ycombinator.com/front?day={}-{}-{}",
+            date.0, date.1, date.2);
 
         self.listings(&url)
     }
 
-    /// Retrieve a page of HackerNews listings, such as the front page, or the
-    /// sub-paths:
-    ///   - /news
-    ///   - /front
-    ///   - /ask
-    ///   - /show
-    ///   - /jobs
+    /// Retrieve a page of HackerNews Listings, such as that delivered from:
+    /// * `https://news.ycombinator.com/`
+    /// * `https://news.ycombinator.com/newest`
+    /// * `https://news.ycombinator.com/front`
+    /// * `https://news.ycombinator.com/newcomments`
+    /// * `https://news.ycombinator.com/ask`
+    /// * `https://news.ycombinator.com/show`
+    /// * `https://news.ycombinator.com/jobs`
     pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
         let req = self.http_client.get(url);
         let resp = req.send()?;
@@ -275,7 +278,6 @@ impl Client {
 
         Ok(listings)
     }
-
 }
 
 

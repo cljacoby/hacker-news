@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::collections::VecDeque;
 use lazy_static::lazy_static;
 use regex::Regex;
 use scraper::Html;
@@ -11,11 +12,14 @@ use crate::html::models::Id;
 use crate::html::models::Listing;
 use crate::html::models::Date;
 use crate::html::models::Comment;
+use crate::html::get_test_text;
 use crate::error::HNError;
 
 lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
 }
+
+const COMMENT_INDENT_INCR: i32 = 40;
 
 /// The following example uses this Hacker News post:
 /// * https://news.ycombinator.com/item?id=27145911
@@ -142,7 +146,7 @@ pub fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn Error>> {
     Ok(fnid)
 }
 
-pub fn extract_comment_tree(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
+pub fn extract_comments(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
     // Applied to root of HTML document
     let selector_comment_tree = Selector::parse("table.comment-tree").unwrap();
     // Applied to comment tree root (i.e. node `table.comment-tree`)
@@ -151,7 +155,6 @@ pub fn extract_comment_tree(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>>
     let selector_comment_text = Selector::parse("span.commtext").unwrap();
     let selector_comment_user = Selector::parse("a.hnuser").unwrap();
     let selector_indent = Selector::parse("td.ind img").unwrap();
-
 
     // Query the HTML for the root of the comment tree
     let nodes: Vec<ElementRef> = html.select(&selector_comment_tree)
@@ -162,8 +165,11 @@ pub fn extract_comment_tree(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>>
     let root = nodes.get(0)
         .ok_or("Did not find comment-tree root.")?;
 
-
     // TODO: When using next(), should these check whether the length > 1? 
+    // TODO: Write some kind of helper function to avoid the current use of
+    // .next().ok_or("blah")?.text().next().ok_or("more blah").to_string()
+
+    // This ID fails on comment parsing: 27165954
 
     // Query the HTML for each comment node. Parse to a Comment structs,
     // and collect the Comments in a Vec.
@@ -194,11 +200,44 @@ pub fn extract_comment_tree(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>>
             .attr("width")
             .ok_or("Failed to extract width attr from comment indent node")?
             .parse::<i32>()?;
-        comments.push(Comment { user, id, text, indent });
+        let children = vec![];
+        comments.push(Comment { user, id, text, indent, children });
     }
 
-
     Ok(comments)
+}
+
+pub fn create_comment_tree(comments: Vec<Comment>) -> Vec<Comment> {
+    let mut q = VecDeque::from(comments);
+    let mut forest = Vec::new();
+
+    while let Some(root) = q.pop_front() {
+        forest.push(root);
+        let ptr = forest.last_mut().unwrap();
+        _create_comment_tree(&mut q, ptr);
+    }
+
+    forest
+}
+
+fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
+    let mut last: Option<&mut Comment> = None;
+    while let Some(c) = q.front() {
+        if c.indent == parent.indent + COMMENT_INDENT_INCR {
+            let c = q.pop_front().unwrap();
+            parent.children.push(c);
+            last = Some(parent.children.last_mut().unwrap());
+        }
+        else if c.indent > parent.indent + COMMENT_INDENT_INCR {
+            let next_parent = last.take()
+                .expect("Jumped a nesting level in comment node hierarchy");
+            _create_comment_tree(q, next_parent);
+        }
+        else {
+            return;
+        }
+    }
+
 }
 
 #[cfg(test)]
@@ -207,98 +246,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_comment_tree() -> Result<(), Box<dyn Error>> {
-        let text = r#"
-        <table border="0" class="comment-tree">
-            <tbody>
-                <tr class="athing comtr" id="27148500">
-                <td>
-                    <table border="0">
-                    <tbody>
-                        <tr>
-                        <td class="ind"><img src="./hnews.27145911_files/s.gif" height="1" width="0"></td>
-                        <td valign="top" class="votelinks">
-                            <center>
-                            <a id="up_27148500" onclick='return vote(event, this, "up")' href="https://news.ycombinator.com/vote?id=27148500&amp;how=up&amp;auth=fd562fec23feae003bfd2a9f341376bb745f9d3f&amp;goto=item%3Fid%3D27145911#27148500">
-                                <div class="votearrow" title="upvote"></div>
-                            </a>
-                            </center>
-                        </td>
-                        <td class="default">
-                            <div style="margin-top:2px; margin-bottom:-10px;"><span class="comhead">
-                            <a href="https://news.ycombinator.com/user?id=akersten" class="hnuser">akersten</a> <span class="age"><a href="https://news.ycombinator.com/item?id=27148500">32 minutes ago</a></span> <span id="unv_27148500"></span><span class="par"></span> <a class="togg" n="2" href="javascript:void(0)" onclick="return toggle(event, 27148500)">[&ndash;]</a>          <span class="storyon"></span>
-                            </span>
-                            </div>
-                            <br>
-                            <div class="comment">
-                            <span class="commtext c00">
-                                I'm going to close a website as soon as I get an unprompted popup that says "Firefox is trying to open Slack."
-                                <p>It's clever but somewhat obvious (in both a to-the-user-that-its-happening and a "well of course it's possible" sense).</p>
-                                <p>So it's cute, but not practical, and I won't lose sleep over it. I'll probably be more inconvenienced by the mitigations that will surely result that make it that much more painful to actually launch a URL scheme, sadly.</p>
-                                <p>I've actually never checked the "Always open Slack for slack:// links" or similar checkboxes, precisely out of predicting shenanigans like this would happen eventually :)</p>
-                                <p>I wouldn't be too offended if browsers changed the way they handle schemes: always open a "how would you like to handle  this link" dialog for any protocol (even if unhandled - like how Windows shows the "how would you like to open this file" dialog), to disguise whether the protocol is handled or not.  Not sure I have the answer for user convenience though if someone is used to things automatically opening. That's the "inconvenience" aspect of any potential mitigation, we probably have to get rid of that "remember this choice" checkbox (well, my point is that "have to" is debatable here).
-                                </p>
-                                <div class="reply">
-                                <p><font size="1">
-                                    <u><a href="https://news.ycombinator.com/reply?id=27148500&amp;goto=item%3Fid%3D27145911%2327148500">reply</a></u>
-                                    </font>
-                                </p>
-                                </div>
-                            </span>
-                            </div>
-                        </td>
-                        </tr>
-                    </tbody>
-                    </table>
-                </td>
-                </tr>
-                <tr class="athing comtr" id="27148679">
-                    <td>
-                      <table border="0">
-                        <tbody>
-                          <tr>
-                            <td class="ind"><img src="./hnews.27145911_files/s.gif" height="1" width="40"></td>
-                            <td valign="top" class="votelinks">
-                              <center>
-                                <a id="up_27148679" onclick='return vote(event, this, "up")' href="https://news.ycombinator.com/vote?id=27148679&amp;how=up&amp;auth=69ce9e200ff327bf18529fb30cbaea513b65f348&amp;goto=item%3Fid%3D27145911#27148679">
-                                  <div class="votearrow" title="upvote"></div>
-                                </a>
-                              </center>
-                            </td>
-                            <td class="default">
-                              <div style="margin-top:2px; margin-bottom:-10px;"><span class="comhead">
-                                <a href="https://news.ycombinator.com/user?id=judge2020" class="hnuser">judge2020</a> <span class="age"><a href="https://news.ycombinator.com/item?id=27148679">10 minutes ago</a></span> <span id="unv_27148679"></span><span class="par"></span> <a class="togg" n="1" href="javascript:void(0)" onclick="return toggle(event, 27148679)">[&ndash;]</a>          <span class="storyon"></span>
-                                </span>
-                              </div>
-                              <br>
-                              <div class="comment">
-                                <span class="commtext c00">
-                                  On Chrome MacOS Big Sur, it doesn't require accepting the prompt, and the demo shows you can accomplish this in a small pop-under or pop-up, which a lot of inexperienced users might simply ignore.
-                                  <p>Browser devs definitely still need to patch this vulnerability by making it an instant-return no-feedback prompt to open an application.
-                                  </p>
-                                  <div class="reply">
-                                    <p><font size="1">
-                                      <u><a href="https://news.ycombinator.com/reply?id=27148679&amp;goto=item%3Fid%3D27145911%2327148679">reply</a></u>
-                                      </font>
-                                    </p>
-                                  </div>
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
-            </tbody>
-        </table>
-        "#;
-
-        let html = Html::parse_fragment(text);
-        let comments = extract_comment_tree(&html)?;
+    fn test_extract_comments() -> Result<(), Box<dyn Error>> {
+        let text = get_test_text();
+        let html = Html::parse_fragment(&text);
+        let comments = extract_comments(&html)?;
         println!("comments = {:#?}", comments);
 
         Ok(())
     }
 
+    #[test]
+    fn test_comment_tree() -> Result<(), Box<dyn Error>> {
+        let text = get_test_text();
+        let html = Html::parse_document(&text);
+        let comments = extract_comments(&html)?;
+        let forest = create_comment_tree(comments);
+        println!("forest = {:#?}", forest);
+
+        Ok(())
+    }
 }

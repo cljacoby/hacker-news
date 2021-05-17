@@ -12,7 +12,6 @@ use hnews::firebase::models::Id;
 use hnews::firebase::client::HNClient;
 use hnews::html::client::Client;
 use hnews::html::models::Listing;
-
 use hnews::html::config::HNConfig;
 
 fn init_logger() {
@@ -153,32 +152,25 @@ pub mod news {
 
         Ok(())
     }
-    
-    fn write_tabular<Wrt>(mut fmt: Wrt, listing: &Listing) -> Result<(), Box<dyn Error>>
-        where Wrt: std::fmt::Write
-    {
-        fmt.write_str(&format!("{}|{}|{}|{}|{}\n",
-            listing.title,
-            listing.id,
-            listing.score.unwrap_or(0),
-            listing.user.clone().unwrap_or("".to_string()),
-            listing.url
-        ));
 
-        Ok(())
+    // id | score | author | title
+    fn print_tabular(listings: &Vec<Listing>) {
+        for l in listings.iter() {
+            println!("{:<1}        {:<1}        {:<1}        {:<1}",
+                l.id,
+                l.score.unwrap_or(0),
+                l.user.as_ref().unwrap_or(&"".to_string()),
+                l.title);
+        }
     }
 
     pub fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let client = Client::new("", "");
-        // let stdout = std::io::stdout();
-        // let mut handle = stdout.lock();
-        let mut out = String::new();
-
-        for listing in client.news()? {
-            // write_tabular(&mut out, &listing);
-            write_ron(&mut out, &listing);
-        }
-        println!("{}", out);
+        // for listing in client.news()? {
+        //     write_ron(&mut out, &listing);
+        // }
+        let listings = client.news()?;
+        print_tabular(&listings);
 
         Ok(())
     }
@@ -234,7 +226,6 @@ pub mod hn {
 
     pub fn parser<'a, 'b>() -> App<'a, 'b> {
         App::new("hnews")
-            .setting(AppSettings::ArgRequiredElseHelp)
             .subcommand(query::parser())
             .subcommand(_query::parser())
             .subcommand(tree::parser())
@@ -251,7 +242,8 @@ pub mod hn {
             (tree::NAME, Some(matches)) => tree::cmd(matches),
             (news::NAME, Some(matches)) => news::cmd(matches),
             (login::NAME, Some(matches)) => login::cmd(matches),
-            _ => unreachable!("clap will require passing a recognized subcommand"),
+            // Lack of a subcommand defaults to listing the current HN front page
+            _ => news::cmd(matches),
         }
     }
 }
