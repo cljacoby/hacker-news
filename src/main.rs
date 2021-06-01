@@ -1,22 +1,26 @@
 use std::env;
 use std::error::Error;
-use std::fmt::Write;
-use clap::App;
-use clap::AppSettings;
-use clap::Arg;
-use clap::ArgMatches;
-use clap::SubCommand;
-use env_logger;
-use hnews::models::Id;
-use hnews::client::Client;
-use hnews::models::Listing;
-use hnews::config::HNConfig;
+// use std::fmt::Write;
+// use clap::App;
+// use clap::AppSettings;
+// use clap::Arg;
+// use clap::ArgMatches;
+// use clap::SubCommand;
+// use env_logger;
+// use hnews::models::Id;
+// use hnews::client::Client;
+// use hnews::models::Listing;
+// use hnews::config::HNConfig;
+use hnews::cli::hnews;
 
-fn init_logger() {
-    #[allow(unused_variables)]
-    env_logger::init();
-}
 
+
+// fn init_logger() {
+//     #[allow(unused_variables)]
+//     env_logger::init();
+// }
+
+/*
 pub mod query {
 
     use super::*;
@@ -51,7 +55,9 @@ pub mod query {
     }
 
 }
+*/
 
+/*
 /// For a comment-able item, retrieve all the comments
 pub mod tree {
 
@@ -99,11 +105,16 @@ pub mod tree {
         unimplemented!("Re-implement this with HTML based client");
     }
 }
+*/
 
+/*
 /// Get front page listings of Hacker News.
 pub mod news {
 
     use super::*;
+    use grid_printer::GridPrinter;
+    use grid_printer::style::StyleOpt;
+    use grid_printer::style::Fg;
     
     pub const NAME: &'static str = "news";
 
@@ -111,38 +122,34 @@ pub mod news {
         SubCommand::with_name(news::NAME)
     }
 
-    fn write_ron<Wrt>(mut fmt: Wrt, listing: &Listing) -> Result<(), Box<dyn Error>>
-        where Wrt: std::fmt::Write
-    {
-        fmt.write_str(&format!("{:#?}\n", listing))?;
-
-        Ok(())
-    }
-
-    // id | score | author | title
-    fn print_tabular(listings: &Vec<Listing>) {
-        for l in listings.iter() {
-            println!("{:<1}        {:<1}        {:<1}        {:<1}",
-                l.id,
-                l.score.unwrap_or(0),
-                l.user.as_ref().unwrap_or(&"".to_string()),
-                l.title);
-        }
-    }
-
     pub fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let client = Client::new("", "");
-        // for listing in client.news()? {
-        //     write_ron(&mut out, &listing);
-        // }
         let listings = client.news()?;
-        print_tabular(&listings);
+        let grid: Vec<Vec<String>> = listings.into_iter().map(|l| vec![
+            l.id.clone().to_string(),
+            l.score.clone().unwrap_or(0).to_string(),
+            l.user.clone().unwrap_or("".to_string()),
+            l.title.clone(),
+        ]).collect();
+
+        let rows = grid.len();
+        let cols = match grid.get(0) {
+            None => return Ok(()),
+            Some(first_row) => first_row.len(),
+        };
+        let printer = GridPrinter::builder(rows, cols)
+            .col_spacing(4)
+            .col_style(1, StyleOpt::new().fg(Fg::Red))?
+            .build();
+        printer.print(&grid);
 
         Ok(())
     }
 
 }
+*/
 
+/*
 /// Login with a given username and password
 pub mod login {
 
@@ -184,8 +191,10 @@ pub mod login {
     }
     
 }
+*/
 
 // Top level parser/cmd for the cli
+/*
 pub mod hn {
 
     use super::*;
@@ -211,12 +220,13 @@ pub mod hn {
         }
     }
 }
+*/
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let app = hn::parser();
+    let app = hnews::parser();
     let matches = app.get_matches_from(env::args_os());
 
-    match hn::cmd(&matches) {
+    match hnews::cmd(&matches) {
         Ok(_) => std::process::exit(0),
         Err(e) => {
             println!("{}", e);

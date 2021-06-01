@@ -5,15 +5,12 @@ use regex::Regex;
 use scraper;
 use scraper::Html;
 use scraper::Selector;
-use scraper::element_ref::Select;
 use scraper::ElementRef;
 use log;
 use crate::models::Score;
 use crate::models::Id;
 use crate::models::Listing;
-use crate::models::Date;
 use crate::models::Comment;
-use crate::get_test_text;
 use crate::error::HNError;
 
 lazy_static! {
@@ -51,7 +48,7 @@ pub fn extract_listings(html: &Html) -> Result<Vec<Listing>, Box<dyn Error>> {
 
     // Selectors applied to title node
     let selector_titlelink = Selector::parse("td.title > a.storylink").unwrap();
-    let selector_sitebit = Selector::parse("td.title > span.sitebit.comhead > a").unwrap();
+    let _selector_sitebit = Selector::parse("td.title > span.sitebit.comhead > a").unwrap();
 
     // Selectors applied to the subtext node
     let selector_score = Selector::parse("span.score").unwrap();
@@ -245,6 +242,7 @@ fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
 mod tests {
 
     use super::*;
+    use crate::get_test_text;
 
     #[test]
     fn test_extract_comments() -> Result<(), Box<dyn Error>> {

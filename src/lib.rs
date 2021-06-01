@@ -2,17 +2,14 @@ use std::io::Write;
 use env_logger;
 use env_logger::Builder;
 use log;
-use std::error::Error;
 use log::LevelFilter;
-use scraper::Html;
-use scraper::Selector;
-use scraper::element_ref::ElementRef;
 
 pub mod error;
 pub mod client;
 pub mod config;
 pub mod parse;
 pub mod models;
+pub mod cli;
 
 pub fn init_logger() {
     let mut logger = Builder::from_default_env();

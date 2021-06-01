@@ -38,7 +38,6 @@ impl HNConfig {
 #[cfg(test)]
 mod tests {
 
-    use std::path::Path;
     use std::path::PathBuf;
     use std::error::Error;
     use super::HNConfig;

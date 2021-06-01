@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::collections::HashMap;
-use std::sync::Once;
 use std::cell::RefCell;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -13,18 +12,13 @@ use reqwest::redirect::Policy;
 use scraper;
 use scraper::Html;
 use scraper::Selector;
-use scraper::element_ref::Select;
 use scraper::ElementRef;
-use env_logger;
 use log;
-use log::LevelFilter;
-use crate::init_logger;
 use crate::error::HNError;
 use crate::parse::extract_listings;
 use crate::parse::extract_comments;
 use crate::parse::extract_fnid;
 use crate::parse::create_comment_tree;
-use crate::models::Score;
 use crate::models::Id;
 use crate::models::Listing;
 use crate::models::Date;
@@ -57,9 +51,9 @@ use crate::models::Comment;
  * Consider placing all HTML parsing logic into the `extract` function
  * */
 
-const URL_LOGIN: &'static str =         "https://news.ycombinator.com/login";
-const URL_SUBMIT_FORM: &'static str =   "https://news.ycombinator.com/submit";
-const URL_SUBMIT: &'static str =        "https://news.ycombinator.com/r";
+const URL_LOGIN: &'static str = "https://news.ycombinator.com/login";
+const URL_SUBMIT_FORM: &'static str = "https://news.ycombinator.com/submit";
+const URL_SUBMIT: &'static str = "https://news.ycombinator.com/r";
 
 lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
@@ -109,7 +103,7 @@ impl Client {
         }
     }
 
-    fn submit(
+    pub fn submit(
         &self,
         title: String,
         url: Option<String>,
@@ -285,12 +279,15 @@ impl Client {
 #[cfg(test)]
 mod tests {
 
+    use std::sync::Once;
+
     use super::*;
     static LOG_INIT: Once = Once::new(); 
     
     fn setup() {
         LOG_INIT.call_once(|| {
-            init_logger()
+            // init_logger()
+            env_logger::init();
         });
     }
 
@@ -320,7 +317,7 @@ mod tests {
         let pwd: String = std::env::var("HN_PASS")?;
         println!("user = {:?}", user);
         println!("pwd = {:?}", pwd);
-        let mut client = Client::new(&user, &pwd);
+        let client = Client::new(&user, &pwd);
         client.login()?;
 
         Ok(())
