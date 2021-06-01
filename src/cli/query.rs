@@ -4,7 +4,7 @@ use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
 use crate::client::Client;
-use crate::models::Id;
+use crate::model::Id;
 
 pub const NAME: &'static str = "query";
 

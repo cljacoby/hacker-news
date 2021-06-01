@@ -26,15 +26,6 @@ impl HNConfig {
 
 }
 
-// "~/.config/hnews/hnews.json"
-// fn read_config_file(path: &Path) -> Result<HNConfig, Box<dyn Error>> {
-//     let f = File::open(path)?;
-//     let rd = BufReader::new(f);
-//     let config = serde_json::from_reader(rd)?;
-
-//     Ok(config)
-// }
-
 #[cfg(test)]
 mod tests {
 

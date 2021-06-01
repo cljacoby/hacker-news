@@ -7,10 +7,10 @@ use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
 use log;
-use crate::models::Score;
-use crate::models::Id;
-use crate::models::Listing;
-use crate::models::Comment;
+use crate::model::Score;
+use crate::model::Id;
+use crate::model::Listing;
+use crate::model::Comment;
 use crate::error::HNError;
 
 lazy_static! {
@@ -19,28 +19,7 @@ lazy_static! {
 
 const COMMENT_INDENT_INCR: i32 = 40;
 
-/// The following example uses this Hacker News post:
-/// * https://news.ycombinator.com/item?id=27145911
-/// 
-/// The HTML for the title of this post appears as follows:
-/// ```xml
-/// <tr class="athing" id="27145911">
-///     <td align="right" valign="top" class="title"><span class="rank"></span></td>
-///     <td valign="top" class="votelinks">
-///         <center>
-///             <a id="up_27145911" onclick='return vote(event, this, "up")'
-///                 href="https://news.ycombinator.com/vote?id=27145911&amp;how=up&amp;auth=b07f7bc2e1dd7deabe0369a86cb670b69f833b83&amp;goto=item%3Fid%3D27145911">
-///                 <div class="votearrow" title="upvote"></div>
-///             </a>
-///         </center>
-///     </td>
-///     <td class="title">
-///         <a href="https://fingerprintjs.com/blog/external-protocol-flooding/"
-///         class="storylink">Vulnerability allows cross-browser tracking in Chrome, Firefox, Safari, and Tor</a>
-///     <span class="sitebit comhead"> (<a href="https://news.ycombinator.com/from?site=fingerprintjs.com"><span class="sitestr">fingerprintjs.com</span></a>)</span>
-///     </td>
-/// </tr>
-/// ```
+
 pub fn extract_listings(html: &Html) -> Result<Vec<Listing>, Box<dyn Error>> {
 
     // Selectors applied to root html node to locate title nodes 
@@ -242,11 +221,11 @@ fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
 mod tests {
 
     use super::*;
-    use crate::get_test_text;
+    use crate::tests::get_test_text;
 
     #[test]
     fn test_extract_comments() -> Result<(), Box<dyn Error>> {
-        let text = get_test_text();
+        let text = get_test_text()?;
         let html = Html::parse_fragment(&text);
         let comments = extract_comments(&html)?;
         println!("comments = {:#?}", comments);
@@ -256,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_comment_tree() -> Result<(), Box<dyn Error>> {
-        let text = get_test_text();
+        let text = get_test_text()?;
         let html = Html::parse_document(&text);
         let comments = extract_comments(&html)?;
         let forest = create_comment_tree(comments);

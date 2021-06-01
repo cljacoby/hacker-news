@@ -19,37 +19,11 @@ use crate::parse::extract_listings;
 use crate::parse::extract_comments;
 use crate::parse::extract_fnid;
 use crate::parse::create_comment_tree;
-use crate::models::Id;
-use crate::models::Listing;
-use crate::models::Date;
-use crate::models::Comment;
+use crate::model::Id;
+use crate::model::Listing;
+use crate::model::Date;
+use crate::model::Comment;
 
-/* Note:
- *
- * Consider how fields like `score` and `id` should be shared between
- * firebase and html clients
- *
- * Selector::parse() returns an Error type which doesn't implement
- * std::error::Error, and therefore doesn't work using Result<T, Box<dyn Error>>
- * as a return type. Maybe open a pull request on the lib to implement
- * std::error::Error.
- *
- * Because all the methods are implemented in a trait, there is no concept
- * of public vs. private. Maybe consider not using the trait? Or maybe
- * consider not having seperate structs for auth and unauth
- * */
-
-
-/* Todo:
- *
- * Add a `comment` attribute to the Listing struct, and have it be the comment
- * count displayed on a Listing.
- *
- * If Item and Struct are basically all the same information, consider representing
- * them as a single struct.
- *
- * Consider placing all HTML parsing logic into the `extract` function
- * */
 
 const URL_LOGIN: &'static str = "https://news.ycombinator.com/login";
 const URL_SUBMIT_FORM: &'static str = "https://news.ycombinator.com/submit";
@@ -58,21 +32,6 @@ const URL_SUBMIT: &'static str = "https://news.ycombinator.com/r";
 lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
 }
-
-// pub type Score=u32;
-// pub type Id=u32;
-
-// pub struct Date(pub u16, pub u8, pub u8);
-
-// #[derive(Debug)]
-// pub struct Listing {
-//     pub title: String,
-//     pub id: Id,
-//     pub score: Option<Score>,
-//     pub user: Option<String>,
-//     // comments: u32,
-//     pub url: String,
-// }
 
 pub struct Client {
     http_client: reqwest::blocking::Client,
@@ -279,17 +238,9 @@ impl Client {
 #[cfg(test)]
 mod tests {
 
-    use std::sync::Once;
-
     use super::*;
-    static LOG_INIT: Once = Once::new(); 
-    
-    fn setup() {
-        LOG_INIT.call_once(|| {
-            // init_logger()
-            env_logger::init();
-        });
-    }
+
+    use crate::tests::setup;
 
     #[test]
     fn test_news() -> Result<(), Box<dyn Error>> {
@@ -313,6 +264,7 @@ mod tests {
 
     #[test]
     fn test_login() -> Result<(), Box<dyn Error>> {
+        setup();
         let user: String = std::env::var("HN_USER")?;
         let pwd: String = std::env::var("HN_PASS")?;
         println!("user = {:?}", user);

@@ -24,10 +24,3 @@ pub struct Comment {
     // pub bool: deleted,
     pub children: Vec<Comment>,
 }
-
-// #[derive(Debug)]
-// pub struct CommentNode {
-//     pub comment: Comment,
-//     pub children: Vec<Comment>,
-// }
-
