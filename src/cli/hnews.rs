@@ -1,30 +1,38 @@
 use std::error::Error;
 use clap::App;
 use clap::ArgMatches;
-use crate::cli::query;
-use crate::cli::tree;
-use crate::cli::news;
-use crate::cli::login;
+use crate::cli::HnCommand;
+use crate::cli::tree::Tree;
+use crate::cli::login::Login;
+use crate::cli::query::Query;
+use crate::cli::news::News;
 
 /// Top level parser/cmd for the cli
+pub struct Hnews;
 
-pub fn parser<'a, 'b>() -> App<'a, 'b> {
-    App::new("hnews")
-        .subcommand(query::parser())
-        .subcommand(tree::parser())
-        .subcommand(news::parser())
-        .subcommand(login::parser())
-}
+impl HnCommand for Hnews {
+    const NAME: &'static str = "hnews";
 
-pub fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    env_logger::init();
-
-    match matches.subcommand() {
-        (query::NAME, Some(matches)) => query::cmd(matches),
-        (tree::NAME, Some(matches)) => tree::cmd(matches),
-        (news::NAME, Some(matches)) => news::cmd(matches),
-        (login::NAME, Some(matches)) => login::cmd(matches),
-        // Lack of a subcommand defaults to listing the current HN front page
-        _ => news::cmd(matches),
+    fn parser<'a, 'b>() -> App<'a, 'b> {
+        App::new(Self::NAME)
+            .subcommand(Query::parser())
+            .subcommand(Tree::parser())
+            .subcommand(News::parser())
+            .subcommand(Login::parser())
     }
+
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+        env_logger::init();
+
+        match matches.subcommand() {
+            (Query::NAME, Some(matches)) => Query::cmd(matches),
+            (Tree::NAME, Some(matches)) => Tree::cmd(matches),
+            (News::NAME, Some(matches)) => News::cmd(matches),
+            (Login::NAME, Some(matches)) => Login::cmd(matches),
+            // Lack of a subcommand defaults to listing the current HN front page
+            _ => News::cmd(matches),
+        }
+    }
+
 }
+

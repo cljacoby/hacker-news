@@ -5,33 +5,38 @@ use clap::ArgMatches;
 use clap::SubCommand;
 use crate::client::Client;
 use crate::model::Id;
+use crate::cli::HnCommand;
 
-pub const NAME: &'static str = "query";
+pub struct Query;
 
-pub fn parser<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(NAME).arg(
-        Arg::with_name("id")
-            .value_name("id")
-            .required(true)
-            .takes_value(true)
-            .min_values(1),
-    )
-}
+impl HnCommand for Query {
+    const NAME: &'static str = "query";
 
-pub fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let id = match matches.value_of("id") {
-        None => unreachable!("clap will require an argument value"),
-        Some(id) => id,
-    };
-    let id: Id = id.parse()?;
+    fn parser<'a, 'b>() -> App<'a, 'b> {
+        SubCommand::with_name(Self::NAME).arg(
+            Arg::with_name("id")
+                .value_name("id")
+                .required(true)
+                .takes_value(true)
+                .min_values(1),
+        )
+    }
 
-    let client = Client::new("test", "test");
-    let item = client.item(id)?;
-    println!("item = {:#?}", item);
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+        let id = match matches.value_of("id") {
+            None => unreachable!("clap will require an argument value"),
+            Some(id) => id,
+        };
+        let id: Id = id.parse()?;
 
-    let comments = client._comments(id)?;
-    println!("comments = {:#?}", comments);
+        let client = Client::new("test", "test");
+        let item = client.item(id)?;
+        println!("item = {:#?}", item);
 
-    Ok(())
+        let comments = client._comments(id)?;
+        println!("comments = {:#?}", comments);
+
+        Ok(())
+    }
 }
 
