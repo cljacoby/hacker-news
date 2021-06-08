@@ -130,7 +130,6 @@ impl Client {
     }
 
     pub fn login(&self) -> Result<(), Box<dyn Error>> {
-        
         // Create form-data body parameters
         let mut formdata = HashMap::new();
         formdata.insert("acct", &self.username);

@@ -1,4 +1,5 @@
 use std::error::Error;
+use serde_json;
 use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
@@ -7,10 +8,10 @@ use crate::client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
 
-pub struct Query;
+pub struct Comments;
 
-impl HnCommand for Query {
-    const NAME: &'static str = "query";
+impl HnCommand for Comments {
+    const NAME: &'static str = "comments";
 
     fn parser<'a, 'b>() -> App<'a, 'b> {
         SubCommand::with_name(Self::NAME).arg(
@@ -30,9 +31,11 @@ impl HnCommand for Query {
         let id: Id = id.parse()?;
 
         let client = Client::new("test", "test");
-        let item = client.item(id)?;
-        println!("item = {:#?}", item);
-        
+
+        let comments = client._comments(id)?;
+        let json = serde_json::to_string(&comments)?;
+        println!("{}", json);
+
         Ok(())
     }
 }

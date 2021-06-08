@@ -154,18 +154,30 @@ pub fn extract_comments(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
     for node in root.select(&selector_comment) {
         let id = node.value()
             .id()
-            .ok_or("Title node did not have HTML Id attribute")?
+            .ok_or("Title node did not have HTML id attribute")?
             .parse::<Id>()?;
         let text = node.select(&selector_comment_text)
             .next()
-            .ok_or("Failed to find comment text under a comment node")?
+            .ok_or_else(|| {
+                log::warn!("Failed to find comment text for id = {}", id);
+                let msg = format!("Failed to find comment text for id = {}", id); 
+                msg.as_str().to_owned()
+            })?
             .text()
             .next()
-            .ok_or("Failed to extract inner text from comment text node")?
+            .ok_or_else(|| {
+                log::warn!("Failed to extract inner text for comment id = {}", id);
+                let msg = format!("Failed to extract inner text for comment id = {}", id);
+                msg.as_str().to_owned()
+            })?
             .to_string();
         let user = node.select(&selector_comment_user)
             .next()
-            .ok_or("Failed to find comment user under a comment node")?
+            .ok_or_else(|| {
+                log::warn!("Failed to find the user authoring comment id={}", id);
+                let msg = format!("Failed to find the user authoring comment id={}", id);
+                msg.as_str().to_owned()
+            })?
             .text()
             .next()
             .ok_or("Failed to extract inner text from comment user node")?

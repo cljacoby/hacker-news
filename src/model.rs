@@ -1,3 +1,5 @@
+use serde::Deserialize;
+use serde::Serialize;
 
 pub type Score=u32;
 pub type Id=u32;
@@ -5,7 +7,7 @@ pub type Id=u32;
 #[derive(Debug)]
 pub struct Date(pub u16, pub u8, pub u8);
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Listing {
     pub title: String,
     pub id: Id,
@@ -15,7 +17,7 @@ pub struct Listing {
     pub url: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Comment {
     pub user: String,
     pub id: Id,
