@@ -17,7 +17,7 @@ lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
 }
 
-const COMMENT_INDENT_INCR: i32 = 40;
+const COMMENT_INDENT_INCR: u32 = 40;
 
 
 pub fn extract_listings(html: &Html) -> Result<Vec<Listing>, Box<dyn Error>> {
@@ -188,7 +188,7 @@ pub fn extract_comments(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
             .value()
             .attr("width")
             .ok_or("Failed to extract width attr from comment indent node")?
-            .parse::<i32>()?;
+            .parse::<u32>()?;
         let children = vec![];
         comments.push(Comment { user, id, text, indent, children });
     }
