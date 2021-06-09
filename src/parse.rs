@@ -123,13 +123,50 @@ pub fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn Error>> {
     Ok(fnid)
 }
 
+
+// TODO: Is it possible to find a comment such that the span.commtext has no innerText
+// but it does have subsequent <p> nodes which do have text?
+fn extract_comment_text(node: &ElementRef) -> Result<String, Box<dyn Error>> {
+    let qs_comment_text = Selector::parse("span.commtext").unwrap();
+    let qs_comment_more_text = Selector::parse("span.commtext p").unwrap();
+    let mut text = node.select(&qs_comment_text)
+        .next()
+        // .ok_or_else(|| {
+        //     log::warn!("Failed to find comment text for id = {}", id);
+        //     let msg = format!("Failed to find comment text for id = {}", id);
+        //     msg.as_str().to_owned()
+        // })?
+        .ok_or("Failed to find comment text")?
+        .text()
+        .next()
+        // .ok_or_else(|| {
+        //     log::warn!("Failed to extract inner text for comment id = {}", id);
+        //     let msg = format!("Failed to extract inner text for comment id = {}", id);
+        //     msg.as_str().to_owned()
+        // })?
+        .ok_or("Failed to extract inner text for comment")?
+        .to_string();
+
+    for child in node.select(&qs_comment_more_text) {
+        let more_text = child.text()
+            .next()
+            .ok_or("Failed to obtain inner text from comment text paragraph node")?;
+
+        // We add a newline since we're concatenating <p> node text together
+        text.push('\n');
+        text.push_str(&more_text);
+        log::info!("more_text = {:?}", more_text);
+    }
+
+    Ok(text)
+}
+
 pub fn extract_comments(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
     // Applied to root of HTML document
     let selector_comment_tree = Selector::parse("table.comment-tree").unwrap();
     // Applied to comment tree root (i.e. node `table.comment-tree`)
     let selector_comment = Selector::parse("tr.athing.comtr").unwrap();
     // Applied to comment node (i.e. node `tr.athing.comtr`)
-    let selector_comment_text = Selector::parse("span.commtext").unwrap();
     let selector_comment_user = Selector::parse("a.hnuser").unwrap();
     let selector_indent = Selector::parse("td.ind img").unwrap();
 
@@ -156,21 +193,7 @@ pub fn extract_comments(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
             .id()
             .ok_or("Title node did not have HTML id attribute")?
             .parse::<Id>()?;
-        let text = node.select(&selector_comment_text)
-            .next()
-            .ok_or_else(|| {
-                log::warn!("Failed to find comment text for id = {}", id);
-                let msg = format!("Failed to find comment text for id = {}", id); 
-                msg.as_str().to_owned()
-            })?
-            .text()
-            .next()
-            .ok_or_else(|| {
-                log::warn!("Failed to extract inner text for comment id = {}", id);
-                let msg = format!("Failed to extract inner text for comment id = {}", id);
-                msg.as_str().to_owned()
-            })?
-            .to_string();
+        let text = extract_comment_text(&node)?;
         let user = node.select(&selector_comment_user)
             .next()
             .ok_or_else(|| {
