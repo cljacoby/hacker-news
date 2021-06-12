@@ -8,14 +8,14 @@ use scraper::ElementRef;
 use crate::model::Comment;
 use crate::error::HnError;
 
-pub(crate) mod comments;
-pub(crate) mod listings;
+pub mod comments;
+pub mod listings;
 
 // Re-exports parser namespaces for conveniant library ergonmics
 pub use crate::parser::comments::CommentsParser;
 pub use crate::parser::listings::ListingsParser;
 
-pub(crate) trait HtmlParse {
+pub trait HtmlParse {
     type Item;
 
     fn parse(html: &Html) -> Result<Self::Item, Box<dyn Error>>;
