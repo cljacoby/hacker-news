@@ -41,9 +41,6 @@ pub fn init_logger() {
 #[cfg(test)]
 mod tests {
 
-    use std::fs::File;
-    use std::error::Error;
-    use std::io::Read;
     use std::sync::Once;
 
     static TEST_LOGGER: Once = Once::new(); 
@@ -53,13 +50,5 @@ mod tests {
             // init_logger()
             env_logger::init();
         });
-    }
-
-    pub fn get_test_text() -> Result<String, Box<dyn Error>> {
-        let mut f = File::open("../data/test.html")?;
-        let mut buff = String::new();
-        f.read_to_string(&mut buff)?;
-
-        Ok(buff)
     }
 }

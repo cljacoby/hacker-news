@@ -96,30 +96,3 @@ fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
 
 }
 
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use crate::tests::get_test_text;
-
-    #[test]
-    fn test_extract_comments() -> Result<(), Box<dyn Error>> {
-        let text = get_test_text()?;
-        let html = Html::parse_fragment(&text);
-        let comments = extract_comments(&html)?;
-        println!("comments = {:#?}", comments);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_comment_tree() -> Result<(), Box<dyn Error>> {
-        let text = get_test_text()?;
-        let html = Html::parse_document(&text);
-        let comments = extract_comments(&html)?;
-        let forest = create_comment_tree(comments);
-        println!("forest = {:#?}", forest);
-
-        Ok(())
-    }
-}
