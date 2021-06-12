@@ -11,7 +11,7 @@ use crate::model::Score;
 use crate::model::Id;
 use crate::model::Listing;
 use crate::model::Comment;
-use crate::error::HNError;
+use crate::error::HnError;
 
 lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
@@ -108,7 +108,7 @@ pub fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn Error>> {
     let captures = match FNID_REGEX.captures(&text) {
         Some(captures) => captures,
         None => {
-            return Err(HNError::boxed("Fnid regex failed to process input HMTL text"));
+            return Err(Box::new(HnError::HtmlParsingErr));
         }
     };
     let fnid = match captures.get(1) {
@@ -116,7 +116,7 @@ pub fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn Error>> {
             fnid.as_str().to_string()
         },
         None => {
-            return Err(HNError::boxed("Fnid capture group prouced no matches"));
+            return Err(Box::new(HnError::HtmlParsingErr));
         }
     };
 

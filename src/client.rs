@@ -14,7 +14,7 @@ use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
 use log;
-use crate::error::HNError;
+use crate::error::HnError;
 use crate::parse::extract_listings;
 use crate::parse::extract_comments;
 use crate::parse::extract_fnid;
@@ -51,15 +51,12 @@ impl Client {
         }
     }
 
-    fn fail_unauthenticated(&self) -> Box<HNError> {
-        HNError::boxed("Cannot perform action because client is unauthenticated")
-    }
-
     fn cookie(&self) -> Result<String, Box<dyn Error>> {
-        match *self.cookie.borrow() {
-            None => Err(self.fail_unauthenticated()),
-            Some(ref cookie) => Ok(format!("{}={};", cookie.0, cookie.1))
-        }
+        // Note: Chaining these causes a compiler error about dropping to early
+        let pair = self.cookie.borrow();
+        let pair = pair.as_ref().ok_or(HnError::AuthErr)?;
+
+        Ok(format!("{}={};", pair.0, pair.1))
     }
 
     pub fn submit(
@@ -69,9 +66,9 @@ impl Client {
         text: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
 
-        if self.cookie.borrow().is_none() {
-            return Err(self.fail_unauthenticated());
-        }
+        let cookie_string = self.cookie()?;
+        let cookie: HeaderValue = cookie_string.parse()
+            .expect("Got a user cookie, but failed to parse it to a header");
 
         let mut formdata = HashMap::new();
         formdata.insert("fnid", self.get_fnid()?);
@@ -81,7 +78,6 @@ impl Client {
         log::debug!("submit post body = {:?}", formdata);
         formdata.insert("title", title);
         
-        let cookie: HeaderValue = self.cookie()?.parse().unwrap();
         let req = self.http_client.post(URL_SUBMIT)
             .header("Cookie", cookie)
             .form(&formdata);
@@ -94,11 +90,10 @@ impl Client {
     }
     
     fn get_fnid(&self) -> Result<String, Box<dyn Error>> {
-        if self.cookie.borrow().is_none() {
-            return Err(self.fail_unauthenticated());
-        }
+        let cookie_string = self.cookie()?;
+        let cookie: HeaderValue = cookie_string.parse()
+            .expect("Got a user cookie, but failed to parse it to a header");
     
-        let cookie: HeaderValue = self.cookie()?.parse().unwrap();
         let req = self.http_client
             .get(URL_SUBMIT_FORM)
             .header("Cookie", cookie);
@@ -112,7 +107,7 @@ impl Client {
         // Error structs, so I can't include it as the src error in my struct
         let selector = match Selector::parse("input[name='fnid']") {
             Err(_src) => {
-                return Err(HNError::boxed("Unable to parse css query selector."));
+                return Err(Box::new(HnError::HtmlParsingErr));
             },
             Ok(selector) => selector,
         };
@@ -121,7 +116,7 @@ impl Client {
         let el = match result.get(0) {
             Some(el) => el,
             None => {
-                return Err(HNError::boxed("Could not locate fnid input from submission form."));
+                return Err(Box::new(HnError::HtmlParsingErr));
             }
         };
         let fnid = extract_fnid(el)?;
