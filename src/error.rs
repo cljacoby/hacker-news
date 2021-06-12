@@ -4,18 +4,18 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum HnError {
-    HtmlParsingErr,
-    AuthErr,
+    HtmlParsingError,
+    AuthError,
 }
 
 impl Display for HnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HnError::HtmlParsingErr => {
+            HnError::HtmlParsingError => {
                 write!(f, "HtmlParsingErr: There was a problem parsing HTML data. This is an internal library error.")
             },
-            HnError::AuthErr => {
-                write!(f, "AuthErr: An unauthenticated client attempted an action requiring authorization.")
+            HnError::AuthError => {
+                write!(f, "AuthError: An unauthenticated client attempted an action requiring authorization.")
             }
         }
     }

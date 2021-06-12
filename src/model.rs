@@ -22,7 +22,7 @@ pub struct Comment {
     pub user: String,
     pub id: Id,
     pub text: String,
-    pub indent: i32,
+    pub indent: u32,
     // pub bool: deleted,
     pub children: Vec<Comment>,
 }

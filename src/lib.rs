@@ -7,7 +7,7 @@ use log::LevelFilter;
 pub mod error;
 pub mod client;
 pub mod config;
-pub mod parse;
+pub mod parser;
 pub mod model;
 pub mod cli;
 

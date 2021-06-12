@@ -15,10 +15,11 @@ use scraper::Selector;
 use scraper::ElementRef;
 use log;
 use crate::error::HnError;
-use crate::parse::extract_listings;
-use crate::parse::extract_comments;
-use crate::parse::extract_fnid;
-use crate::parse::create_comment_tree;
+use crate::parser::HtmlParse;
+use crate::parser::ListingsParser;
+use crate::parser::CommentsParser;
+use crate::parser::extract_fnid;
+use crate::parser::create_comment_tree;
 use crate::model::Id;
 use crate::model::Listing;
 use crate::model::Date;
@@ -54,7 +55,7 @@ impl Client {
     fn cookie(&self) -> Result<String, Box<dyn Error>> {
         // Note: Chaining these causes a compiler error about dropping to early
         let pair = self.cookie.borrow();
-        let pair = pair.as_ref().ok_or(HnError::AuthErr)?;
+        let pair = pair.as_ref().ok_or(HnError::AuthError)?;
 
         Ok(format!("{}={};", pair.0, pair.1))
     }
@@ -107,7 +108,7 @@ impl Client {
         // Error structs, so I can't include it as the src error in my struct
         let selector = match Selector::parse("input[name='fnid']") {
             Err(_src) => {
-                return Err(Box::new(HnError::HtmlParsingErr));
+                return Err(Box::new(HnError::HtmlParsingError));
             },
             Ok(selector) => selector,
         };
@@ -116,7 +117,7 @@ impl Client {
         let el = match result.get(0) {
             Some(el) => el,
             None => {
-                return Err(Box::new(HnError::HtmlParsingErr));
+                return Err(Box::new(HnError::HtmlParsingError));
             }
         };
         let fnid = extract_fnid(el)?;
@@ -176,7 +177,7 @@ impl Client {
         // only extract one listing from a page. Therefore, we can simply pop once
         // from the Vec obtained by extract listings.
 
-        let item = extract_listings(&html)?
+        let item = ListingsParser::parse(&html)?
             .pop()
             .ok_or(format!("Did not find item {}", id))?;
 
@@ -192,7 +193,7 @@ impl Client {
         let resp = req.send()?;
         let text = resp.text()?;
         let html = Html::parse_document(&text);
-        let comments = extract_comments(&html)?;
+        let comments = CommentsParser::parse(&html)?;
         let comment_tree = create_comment_tree(comments);
         
         Ok(comment_tree)
@@ -222,7 +223,7 @@ impl Client {
         let resp = req.send()?;
         let text = resp.text()?;
         let html = Html::parse_document(&text);
-        let listings = extract_listings(&html)?;
+        let listings = ListingsParser::parse(&html)?;
 
         Ok(listings)
     }
