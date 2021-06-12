@@ -1,44 +1,25 @@
 use std::error::Error;
+use std::fmt::Display;
 use std::fmt;
 
 #[derive(Debug)]
-pub struct HNError {
-    msg: String,
-    src: Option<Box<dyn Error + 'static>>,
+pub enum HnError {
+    HtmlParsingErr,
+    AuthErr,
 }
 
-impl fmt::Display for HNError {
+impl Display for HnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error: {}", self.msg)
-    }
-}
-
-impl Error for HNError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.src.as_ref().map(|e| e.as_ref())
-    }
-}
-
-impl HNError {
-    pub fn new(msg: &str, src: Option<Box<dyn Error + 'static>>) -> Self {
-        Self {
-            msg: msg.to_string(),
-            src
+        match self {
+            HnError::HtmlParsingErr => {
+                write!(f, "HtmlParsingErr: There was a problem parsing HTML data. This is an internal library error.")
+            },
+            HnError::AuthErr => {
+                write!(f, "AuthErr: An unauthenticated client attempted an action requiring authorization.")
+            }
         }
     }
-
-    pub fn boxed(msg: &str) -> Box<Self> {
-        Box::new(Self {
-            msg: msg.to_string(),
-            src: None,
-        })
-    }
-
-    pub fn boxed_with_src(msg: &str, src: Box<dyn Error>) -> Box<Self> {
-        Box::new(Self {
-            msg: msg.to_string(),
-            src: Some(src),
-        })
-    }
-
 }
+
+
+impl Error for HnError {}
