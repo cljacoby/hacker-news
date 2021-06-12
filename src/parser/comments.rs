@@ -107,7 +107,7 @@ impl CommentsParser {
             // We add a newline since we're concatenating <p> node text together
             text.push('\n');
             text.push_str(&more_text);
-            log::info!("more_text = {:?}", more_text);
+            log::debug!("more_text = {:?}", more_text);
         }
 
         Ok(text)

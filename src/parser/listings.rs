@@ -43,8 +43,8 @@ impl HtmlParse for ListingsParser {
             listings.push(Listing {
                 title,
                 id,
-                score: Some(score),
-                user: Some(user),
+                score,
+                user,
                 url
             });
         }
@@ -102,41 +102,59 @@ impl ListingsParser {
     }
 
     // Note: This function queries against the subtext node
-    fn parse_user(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
-        let user = node.select(&QS_LISTING_USER)
+    fn parse_user(node: &ElementRef, id: Id) -> Result<Option<String>, Box<dyn Error>> {
+        let user_node = match node.select(&QS_LISTING_USER).next() {
+            None => {
+                log::info!("Failed to locate user node for listing. \
+                This is probably a Jobs, Launch, or Poll listing. id = {}", id);
+                return Ok(None);
+            },
+            Some(user_node) => user_node,
+        };
+
+        let user = user_node.text()
             .next()
             .ok_or_else(|| {
-                log::error!("Failed to locate user node from listing, id = {}", id);
-                HnError::HtmlParsingError
-            })?
-            .text()
-            .next()
-            .ok_or_else(|| {
-                log::error!("Failed to obtain user text from listing, id = {}", id);
+                log::error!("Failed to obtain user text from listing user node, id = {}", id);
                 HnError::HtmlParsingError
             })?
             .to_string();
 
-        Ok(user)
+        Ok(Some(user))
     }
    
     // Note: This function queries against the subtext node
-    fn parse_score(node: &ElementRef, id: Id) -> Result<Score, Box<dyn Error>> {
-        let score = node.select(&QS_SELECTOR_SCORE)
-            .next()
-            .ok_or_else(|| {
-                log::error!("Failed to locate score node from listing, id = {}", id);
-                HnError::HtmlParsingError
-            })?
-            .text()
-            .next()
-            .ok_or_else(|| {
-                log::error!("Failed to obtain user text from listing, id = {}", id);
-                HnError::HtmlParsingError
-            })?
-            .parse::<Score>()?;
+    fn parse_score(node: &ElementRef, id: Id) -> Result<Option<Score>, Box<dyn Error>> {
+        let score_node = match node.select(&QS_SELECTOR_SCORE).next() {
+            None => {
+                log::info!("Failed to locate score node for listing. \
+                This is probably a Jobs, Launch, or Poll listing. id = {}", id);
+                return Ok(None);
+            },
+            Some(score_node) => score_node,
+        };
 
-        Ok(score)
+        let text = score_node.text()
+            .next()
+            .ok_or_else(|| {
+                log::error!("Failed to obtain score text from listing score node, id = {}", id);
+                HnError::HtmlParsingError
+            })?;
+
+        let score = text.strip_suffix(" points")
+            .ok_or_else(|| {
+                log::error!("Failed to strip ' points' from listing score text. id = {}, text =  {},",
+                    id, text);
+                HnError::HtmlParsingError
+            })?
+            .parse::<Score>()
+            .map_err(|_src_err| {
+                log::error!("Failed to parse score numeric value from score text, id = {}, text = {}",
+                    id, text);
+                HnError::HtmlParsingError
+            })?;
+
+        Ok(Some(score))
     }
     
     // Note: This function queries against the title node
