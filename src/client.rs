@@ -135,7 +135,7 @@ impl Client {
 
         // Create headers
         let mut headers = HeaderMap::new();
-        headers.insert("User-Agent", "hnews client/0.0.1".parse().unwrap());
+        headers.insert("User-Agent", "hacker-news client/0.0.1".parse().unwrap());
 
         // Login request requires no redirect on response, therefore we build a 
         // new one rather than referencing self.http_client.

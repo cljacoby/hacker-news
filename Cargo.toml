@@ -7,7 +7,7 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 
 [lib]
-name = "hnews"
+name = "hacker_news"
 path = "src/lib.rs"
 
 [[bin]]

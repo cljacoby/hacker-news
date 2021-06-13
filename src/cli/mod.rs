@@ -7,7 +7,7 @@ pub(crate) mod news;
 pub(crate) mod query;
 pub(crate) mod comments;
 pub(crate) mod tree;
-pub mod hnews;
+pub mod hacker_news;
 
 /// A trait defining the interface to add a subcommand to the command line
 /// application. 
