@@ -1,15 +1,16 @@
 [package]
-name = "hnews"
+name = "hacker-news"
 version = "0.1.0"
 authors = ["cljacoby <cljacoby@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
 
 [lib]
 name = "hnews"
 path = "src/lib.rs"
 
 [[bin]]
-name = "hnews"
+name = "hn"
 path = "src/main.rs"
 
 

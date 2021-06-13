@@ -23,9 +23,9 @@ impl HnCommand for News {
         let listings = client.news()?;
         let grid: Vec<Vec<String>> = listings.into_iter().map(|l| vec![
             l.id.clone().to_string(),
-            l.score.clone().unwrap_or(0).to_string(),
-            l.user.clone().unwrap_or("".to_string()),
-            l.title.clone(),
+            l.score.unwrap_or(0).to_string(),
+            l.user.clone().unwrap_or_else(|| "".to_string()),
+            l.title,
         ]).collect();
 
         let rows = grid.len();

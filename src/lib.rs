@@ -1,7 +1,8 @@
+//! A library for interacting with Hacker News.
+
+
 use std::io::Write;
-use env_logger;
 use env_logger::Builder;
-use log;
 use log::LevelFilter;
 
 pub mod error;
