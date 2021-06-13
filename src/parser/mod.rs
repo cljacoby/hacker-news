@@ -8,14 +8,14 @@ use scraper::ElementRef;
 use crate::model::Comment;
 use crate::error::HnError;
 
-pub(crate) mod comments;
-pub(crate) mod listings;
+pub mod comments;
+pub mod listings;
 
 // Re-exports parser namespaces for conveniant library ergonmics
 pub use crate::parser::comments::CommentsParser;
 pub use crate::parser::listings::ListingsParser;
 
-pub(crate) trait HtmlParse {
+pub trait HtmlParse {
     type Item;
 
     fn parse(html: &Html) -> Result<Self::Item, Box<dyn Error>>;
@@ -97,30 +97,3 @@ fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
 
 }
 
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use crate::tests::get_test_text;
-
-    #[test]
-    fn test_extract_comments() -> Result<(), Box<dyn Error>> {
-        let text = get_test_text()?;
-        let html = Html::parse_fragment(&text);
-        let comments = extract_comments(&html)?;
-        println!("comments = {:#?}", comments);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_comment_tree() -> Result<(), Box<dyn Error>> {
-        let text = get_test_text()?;
-        let html = Html::parse_document(&text);
-        let comments = extract_comments(&html)?;
-        let forest = create_comment_tree(comments);
-        println!("forest = {:#?}", forest);
-
-        Ok(())
-    }
-}

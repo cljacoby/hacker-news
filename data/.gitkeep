@@ -1,0 +1,3 @@
+# This is a dummy file used to preserve the data/ directory within
+# the repository file structure. The integration tests are setup
+# to look in data/ for example data files.

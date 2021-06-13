@@ -20,5 +20,5 @@ private/
 # Ignore all test data files, except the explicitly referenced
 # small testing file
 /data/*
-!/data/HNI_2018-05.small.json
+!/data/.gitkeep
 .vscode/
