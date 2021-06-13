@@ -9,10 +9,10 @@ use crate::cli::news::News;
 use crate::cli::comments::Comments;
 
 /// Top level parser/cmd for the cli
-pub struct Hnews;
+pub struct HackerNews;
 
-impl HnCommand for Hnews {
-    const NAME: &'static str = "hnews";
+impl HnCommand for HackerNews {
+    const NAME: &'static str = "hackernews";
 
     fn parser<'a, 'b>() -> App<'a, 'b> {
         App::new(Self::NAME)

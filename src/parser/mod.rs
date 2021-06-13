@@ -76,6 +76,7 @@ pub fn create_comment_tree(comments: Vec<Comment>) -> Vec<Comment> {
     forest
 }
 
+#[allow(clippy::comparison_chain)]
 fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
     let mut last: Option<&mut Comment> = None;
     while let Some(c) = q.front() {

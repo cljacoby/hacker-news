@@ -39,7 +39,7 @@ mod tests {
             .expect("Failed to read `$HOME` environment variable");
         println!("$HOME = {:?}", home);
         let mut path = PathBuf::from(home);
-        path.push(".hnews.json");
+        path.push(".hn.json");
         println!("path = {:?}", path);
 
         let config = HNConfig::from_file(&path)?;

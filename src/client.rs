@@ -26,9 +26,9 @@ use crate::model::Date;
 use crate::model::Comment;
 
 
-const URL_LOGIN: &'static str = "https://news.ycombinator.com/login";
-const URL_SUBMIT_FORM: &'static str = "https://news.ycombinator.com/submit";
-const URL_SUBMIT: &'static str = "https://news.ycombinator.com/r";
+const URL_LOGIN: &str = "https://news.ycombinator.com/login";
+const URL_SUBMIT_FORM: &str = "https://news.ycombinator.com/submit";
+const URL_SUBMIT: &str = "https://news.ycombinator.com/r";
 
 lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
@@ -74,8 +74,8 @@ impl Client {
         let mut formdata = HashMap::new();
         formdata.insert("fnid", self.get_fnid()?);
         formdata.insert("fnop", "submit-page".to_string());
-        formdata.insert("url", url.unwrap_or("".to_string()));
-        formdata.insert("text", text.unwrap_or("".to_string()));
+        formdata.insert("url", url.unwrap_or_else(|| "".to_string()));
+        formdata.insert("text", text.unwrap_or_else(|| "".to_string()));
         log::debug!("submit post body = {:?}", formdata);
         formdata.insert("title", title);
         
@@ -135,7 +135,7 @@ impl Client {
 
         // Create headers
         let mut headers = HeaderMap::new();
-        headers.insert("User-Agent", "hnews client/0.0.1".parse().unwrap());
+        headers.insert("User-Agent", "hacker-news client/0.0.1".parse().unwrap());
 
         // Login request requires no redirect on response, therefore we build a 
         // new one rather than referencing self.http_client.
