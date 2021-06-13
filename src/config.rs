@@ -33,6 +33,9 @@ mod tests {
     use std::error::Error;
     use super::HNConfig;
 
+    // This test is marked as ignored, as the feature it supports is not
+    // really implemented
+    #[ignore]
     #[test]
     fn test_read_config_file() -> Result<(), Box<dyn Error>> {
         let home = std::env::var("HOME")

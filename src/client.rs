@@ -55,7 +55,7 @@ impl Client {
     fn cookie(&self) -> Result<String, Box<dyn Error>> {
         // Note: Chaining these causes a compiler error about dropping to early
         let pair = self.cookie.borrow();
-        let pair = pair.as_ref().ok_or(HnError::AuthError)?;
+        let pair = pair.as_ref().ok_or(HnError::UnauthenticatedError)?;
 
         Ok(format!("{}={};", pair.0, pair.1))
     }
@@ -126,14 +126,12 @@ impl Client {
     }
 
     pub fn login(&self) -> Result<(), Box<dyn Error>> {
-        // Create form-data body parameters
         let mut formdata = HashMap::new();
         formdata.insert("acct", &self.username);
         formdata.insert("pw", &self.password);
         let goto = "newest".to_string();
         formdata.insert("goto", &goto);
 
-        // Create headers
         let mut headers = HeaderMap::new();
         headers.insert("User-Agent", "hacker-news client/0.0.1".parse().unwrap());
 
@@ -148,14 +146,23 @@ impl Client {
         let req = client.post(URL_LOGIN)
             .headers(headers)
             .form(&formdata);
-        log::debug!("login req = {:?}", req);
+        log::debug!("login request = {:?}", req);
         let resp = req.send()?;
-        log::debug!("login resp = {:?}", resp);
+        if resp.status().as_u16() != 302 {
+            log::error!("login response = {:?}", resp);
+            return Err(Box::new(HnError::AuthenticationError));
+        }
+        log::debug!("login response = {:?}", resp);
 
         // Store user session cookie
         let cookies: Vec<Cookie> = resp.cookies().collect();
         let cookie = cookies.get(0)
-            .ok_or("Unable to retrieve user cookie")?;
+            // .ok_or("Unable to retrieve user cookie")?;
+            .ok_or_else(|| {
+                log::error!("Unable to parse user cookie from succesful login response, \
+                    response = {:?}, cookies = {:?}", resp, cookies);
+                HnError::HtmlParsingError
+            })?;
         let cookie = Some((cookie.name().to_string(), cookie.value().to_string()));
 
         // Store on client instance field
@@ -242,7 +249,8 @@ mod tests {
         setup();
         let client = Client::new("filler_user", "filler_pwd");
         let listings = client.news()?;
-        log::debug!("test_news listings = {:#?}", listings);
+        log::info!("Successfully called Client::news()");
+        log::trace!("Listings output from Client::news() = {:?}", listings);
 
         Ok(())
     }
@@ -260,10 +268,24 @@ mod tests {
     #[test]
     fn test_login() -> Result<(), Box<dyn Error>> {
         setup();
-        let user: String = std::env::var("HN_USER")?;
-        let pwd: String = std::env::var("HN_PASS")?;
-        println!("user = {:?}", user);
-        println!("pwd = {:?}", pwd);
+        let user: String = match std::env::var("HN_USER") {
+            Ok(user) => user,
+            Err(_) => {
+                log::warn!("login test unable to retrieve Hacker News username from \
+                environment variable $HN_USER. Omitting test.");
+                return Ok(());
+            }
+        };
+
+        let pwd: String = match std::env::var("HN_PASS") {
+            Ok(pwd) => pwd,
+            Err(_) => {
+                log::warn!("login test unable to retrieve Hacker News password from \
+                environment variable $HN_PASS. Omitting test.");
+                return Ok(());
+            }
+        };
+        
         let client = Client::new(&user, &pwd);
         client.login()?;
 
