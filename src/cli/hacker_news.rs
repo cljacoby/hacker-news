@@ -24,8 +24,6 @@ impl HnCommand for HackerNews {
     }
 
     fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-        env_logger::init();
-
         match matches.subcommand() {
             (Query::NAME, Some(matches)) => Query::cmd(matches),
             (Tree::NAME, Some(matches)) => Tree::cmd(matches),
