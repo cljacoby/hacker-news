@@ -26,3 +26,18 @@ pub struct Comment {
     // pub bool: deleted,
     pub children: Vec<Comment>,
 }
+
+// TODO: This is essentially a Listing, at least with respect to what it represents in the data
+// model. There should be some sort of unification in the API.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Story {
+    by: String,
+    descendants: u64,
+    id: Id,
+    kids: Vec<Id>,
+    score: Score,
+    time: u64,
+    title: String,
+    // type: String,
+    url: String,
+}

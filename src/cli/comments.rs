@@ -4,7 +4,7 @@ use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
-use crate::client::Client;
+use crate::client::html_client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
 

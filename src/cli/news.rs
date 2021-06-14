@@ -5,7 +5,7 @@ use clap::SubCommand;
 use grid_printer::GridPrinter;
 use grid_printer::style::StyleOpt;
 use grid_printer::style::Fg;
-use crate::client::Client;
+use crate::client::html_client::Client;
 use crate::cli::HnCommand;
 
 /// Get front page listings of Hacker News.

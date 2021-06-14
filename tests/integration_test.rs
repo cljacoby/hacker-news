@@ -6,7 +6,6 @@ mod tests {
     use std::fs::File;
     use std::path::PathBuf;
     use std::error::Error;
-    use std::sync::Once;
     use std::io::Read;
     use regex::Regex;
     use lazy_static::lazy_static;
@@ -14,6 +13,7 @@ mod tests {
     use hacker_news::parser::HtmlParse;
     use hacker_news::parser::ListingsParser;
     use hacker_news::parser::CommentsParser;
+    use hacker_news::util::setup;
 
 
     // Note: There is an identical setup function in src/lib.rs; however, since integration tests
@@ -25,15 +25,6 @@ mod tests {
             .expect("Failed to parse Regex instance: RE_LISTINGS_FILES");
         static ref RE_COMMENTS_FILES: Regex = Regex::new("comments(.*).html")
             .expect("Failed to parse Regex instance: RE_COMMENTS_FILES");
-    }
-
-    static TEST_LOGGER: Once = Once::new(); 
-    
-    pub fn setup() {
-        TEST_LOGGER.call_once(|| {
-            // init_logger()
-            env_logger::init();
-        });
     }
 
     fn data_dir() -> Result<PathBuf, Box<dyn Error>> {
