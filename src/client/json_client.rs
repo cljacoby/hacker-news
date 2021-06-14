@@ -2,7 +2,7 @@ use std::error::Error;
 use serde_json;
 use reqwest;
 use crate::model::Id;
-use crate::model::Story;
+use crate::model::firebase::Item;
 
 pub struct JsonClient {
     http_client: reqwest::blocking::Client,
@@ -20,7 +20,7 @@ impl JsonClient {
     }
 
 
-    pub fn get_by_id(&self, id: Id) -> Result <(), Box<dyn Error>> {
+    pub fn get_by_id(&self, id: Id) -> Result <Item, Box<dyn Error>> {
         let url = format!("{base_url}/{id}.json",
             base_url=URL_GET_BY_ID,
             id=id
@@ -35,11 +35,11 @@ impl JsonClient {
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
 
-        let story: Story = serde_json::from_str(&text)?;
-        log::debug!("story = {:?}", story);
+        let item: Item = serde_json::from_str(&text)?;
+        log::debug!("item = {:?}", item);
         
 
-        Ok(())
+        Ok(item)
     }
 
 }
