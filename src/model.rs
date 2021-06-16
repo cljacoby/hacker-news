@@ -31,6 +31,22 @@ pub mod firebase {
 
     use super::*;
 
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct User {
+        /// The user's unique username. Case-sensitive.
+        id: Option<String>,
+        /// Delay in minutes between a comment's creation and its visibility to other users.
+        delay: Option<u32>,
+        /// Creation date of the user, in Unix Time.
+        created: u32,
+        /// The user's karma.
+        karma: Score,
+        /// The user's optional self-description. HTML.
+        about: Option<String>,
+        /// List of the user's stories, polls and comments.
+        submitted: Option<Vec<Id>>,
+    }
+
     // TODO: This is essentially a Listing, at least with respect to what it represents in the data
     // model. There should be some sort of unification in the API.
     #[derive(Serialize, Deserialize, Debug)]
@@ -162,5 +178,71 @@ pub mod firebase {
         #[serde(rename = "pollopt")]
         PollOption(PollOption),
     }
+    
+    impl Item {
+        pub fn is_job(&self) -> bool {
+            match self {
+                Self::Job(_job) => true,
+                _ => false,
+            }
+        }
+
+        pub fn is_story(&self) -> bool {
+            match self {
+                Self::Story(_story) => true,
+                _ => false,
+            }
+        }
+        
+        pub fn is_comment(&self) -> bool {
+            match self {
+                Self::Comment(_comment) => true,
+                _ => false,
+            }
+        }
+
+        pub fn is_poll(&self) -> bool {
+            match self {
+                Self::Poll(_poll) => true,
+                _ => false,
+            }
+        }
+        
+        pub fn is_poll_option(&self) -> bool {
+            match self {
+                Self::PollOption(_poll_opt) => true,
+                _ => false,
+            }
+        }
+    
+    }
+
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::firebase::Story;
+    use super::firebase::Item;
+
+    #[test]
+    fn test_item_type() {
+        let story = Item::Story(Story { id: 27476206,
+            deleted: None,
+            by: Some("what_ever".to_string()),
+            time: 1623432780,
+            dead: None,
+            kids: Some(vec![27488169, 27478163, 27488195, 27477211, 27488706, 27477425, 27477221, 27489125, 27490162, 27489280, 27487982, 27479605, 27490009, 27488234, 27491642, 27489141, 27477380, 27489264]),
+            descendants: Some(314),
+            score: Some(529),
+            title: Some("Apple admits it ranked its Files app ahead of competitor Dropbox".to_string()),
+            url: Some("https://www.theverge.com/2021/6/11/22528701/apple-rank-own-app-over-competitor-files-dropbox-wwdc-2017".to_string())
+        });
+    
+        assert!(story.is_story());
+    }
+
+
 
 }
