@@ -10,7 +10,7 @@ use crate::model::firebase::ItemsAndProfiles;
 // [DONE] Get User By ID
 // [DONE] Max Item ID
 // [DONE] New and Top Stories
-// Ask HN Stories
+// [DONE] Ask HN Stories
 // Show HN Stories
 // Job HN Stories
 // [DONE] Changed Items and Profiles
@@ -30,7 +30,7 @@ impl JsonClient {
         }
     }
 
-    pub fn get_item(&self, id: Id) -> Result <Item, Box<dyn Error>> {
+    pub fn item(&self, id: Id) -> Result <Item, Box<dyn Error>> {
         let url = format!("{base_url}/item/{id}.json",
             base_url=BASE_URL,
             id=id
@@ -52,7 +52,7 @@ impl JsonClient {
         Ok(item)
     }
     
-    pub fn max_item_id(&self) -> Result <Id, Box<dyn Error>> {
+    pub fn max_item(&self) -> Result <Id, Box<dyn Error>> {
         let url = format!("{base_url}/maxitem.json",
             base_url=BASE_URL,
         );
@@ -72,7 +72,7 @@ impl JsonClient {
         Ok(id)
     }
 
-    pub fn get_user(&self, username: String) -> Result<User, Box<dyn Error>> {
+    pub fn user(&self, username: String) -> Result<User, Box<dyn Error>> {
         let url = format!("{base_url}/user/{id}.json",
             base_url=BASE_URL,
             id=username
@@ -98,7 +98,7 @@ impl JsonClient {
     // example, would it be better for HackerNews Client API methods to create a request object,
     // and then have a single `request` method which executes a request?
 
-    pub fn new_story_ids(&self) -> Result<Vec<Id>, Box<dyn Error>> {
+    pub fn new_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
         let url = format!("{base_url}/newstories.json",
             base_url=BASE_URL,
         );
@@ -118,7 +118,7 @@ impl JsonClient {
         Ok(ids)
     }
 
-    pub fn top_story_ids(&self) -> Result<Vec<Id>, Box<dyn Error>> {
+    pub fn top_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
         let url = format!("{base_url}/topstories.json",
             base_url=BASE_URL,
         );
@@ -138,7 +138,7 @@ impl JsonClient {
         Ok(ids)
     }
 
-    pub fn get_updates(&self) -> Result<(Vec<Id>, Vec<String>), Box<dyn Error>> {
+    pub fn updates(&self) -> Result<(Vec<Id>, Vec<String>), Box<dyn Error>> {
         let url = format!("{base_url}/updates.json",
             base_url=BASE_URL,
         );
@@ -161,6 +161,66 @@ impl JsonClient {
         Ok(updates)
     }
 
+    pub fn ask_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
+        let url = format!("{base_url}/askstories.json",
+            base_url=BASE_URL,
+        );
+        
+        let req = self.http_client.get(&url);
+        let resp = req.send()?;
+        if resp.status().as_u16() != 200 {
+            log::error!("Recieved non 200 status, response = {:?}", resp);
+        }
+        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let text = resp.text()?;
+        log::debug!("text = {:?}", text);
+
+        let ids: Vec<Id> = serde_json::from_str(&text)?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(ids)
+    }
+
+    pub fn show_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
+        let url = format!("{base_url}/showstories.json",
+            base_url=BASE_URL,
+        );
+        
+        let req = self.http_client.get(&url);
+        let resp = req.send()?;
+        if resp.status().as_u16() != 200 {
+            log::error!("Recieved non 200 status, response = {:?}", resp);
+        }
+        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let text = resp.text()?;
+        log::debug!("text = {:?}", text);
+
+        let ids: Vec<Id> = serde_json::from_str(&text)?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(ids)
+    }
+    
+    pub fn job_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
+        let url = format!("{base_url}/jobstories.json",
+            base_url=BASE_URL,
+        );
+        
+        let req = self.http_client.get(&url);
+        let resp = req.send()?;
+        if resp.status().as_u16() != 200 {
+            log::error!("Recieved non 200 status, response = {:?}", resp);
+        }
+        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let text = resp.text()?;
+        log::debug!("text = {:?}", text);
+
+        let ids: Vec<Id> = serde_json::from_str(&text)?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(ids)
+    }
+
 }
 
 #[cfg(test)]
@@ -171,18 +231,18 @@ mod tests {
     use crate::util::setup;
 
     #[test]
-    fn test_get_item() -> Result<(), Box<dyn Error>> {
+    fn test_item() -> Result<(), Box<dyn Error>> {
         setup();
 
         let id_story = 27476206;
         let id_comment = 27509155;
 
         let client = JsonClient::new();
-        let story = client.get_item(id_story)?;
+        let story = client.item(id_story)?;
         log::debug!("item = {:?}", story);
         assert!(story.is_story());
         
-        let comment = client.get_item(id_comment)?;
+        let comment = client.item(id_comment)?;
         log::debug!("item = {:?}", comment);
         assert!(comment.is_comment());
 
@@ -190,47 +250,90 @@ mod tests {
     }
 
     #[test]
-    fn test_max_item_id() -> Result<(), Box<dyn Error>> {
+    fn test_max_item() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = JsonClient::new();
-        let item = client.max_item_id()?;
+        let item = client.max_item()?;
         log::debug!("maxitem = {:?}", item);
 
         Ok(())
     }
     
     #[test]
-    fn test_get_user() -> Result<(), Box<dyn Error>> {
+    fn test_user() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = JsonClient::new();
-        let user = client.get_user("pg".to_string())?;
+        let user = client.user("pg".to_string())?;
         log::debug!("user = {:?}", user);
 
         Ok(())
     }
     
     #[test]
-    fn test_get_top_stories() -> Result<(), Box<dyn Error>> {
+    fn test_new_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = JsonClient::new();
-        let ids = client.top_story_ids()?;
+        let ids = client.new_stories()?;
         log::debug!("ids = {:?}", ids);
 
         Ok(())
     }
     
     #[test]
-    fn test_get_updates() -> Result<(), Box<dyn Error>> {
+    fn test_top_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = JsonClient::new();
-        let updates = client.get_updates()?;
+        let ids = client.top_stories()?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(())
+    }
+    
+    #[test]
+    fn test_updates() -> Result<(), Box<dyn Error>> {
+        setup();
+
+        let client = JsonClient::new();
+        let updates = client.updates()?;
         log::debug!("updates = {:?}", updates);
 
         Ok(())
     }
+    
+    #[test]
+    fn test_ask_stories() -> Result<(), Box<dyn Error>> {
+        setup();
 
+        let client = JsonClient::new();
+        let ids = client.ask_stories()?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(())
+    }
+    
+    #[test]
+    fn test_show_stories() -> Result<(), Box<dyn Error>> {
+        setup();
+
+        let client = JsonClient::new();
+        let ids = client.show_stories()?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_job_stories() -> Result<(), Box<dyn Error>> {
+        setup();
+
+        let client = JsonClient::new();
+        let ids = client.job_stories()?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(())
+    }
 }
