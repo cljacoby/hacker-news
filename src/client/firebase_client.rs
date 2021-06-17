@@ -4,13 +4,23 @@ use reqwest;
 use crate::model::Id;
 use crate::model::firebase::User;
 use crate::model::firebase::Item;
+use crate::model::firebase::ItemsAndProfiles;
+    
+
+// [DONE] Get User By ID
+// [DONE] Max Item ID
+// [DONE] New and Top Stories
+// Ask HN Stories
+// Show HN Stories
+// Job HN Stories
+// [DONE] Changed Items and Profiles
+
 
 pub struct JsonClient {
     http_client: reqwest::blocking::Client,
 }
 
 const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
-
 
 impl JsonClient {
 
@@ -128,6 +138,29 @@ impl JsonClient {
         Ok(ids)
     }
 
+    pub fn get_updates(&self) -> Result<(Vec<Id>, Vec<String>), Box<dyn Error>> {
+        let url = format!("{base_url}/updates.json",
+            base_url=BASE_URL,
+        );
+        
+        let req = self.http_client.get(&url);
+        let resp = req.send()?;
+        if resp.status().as_u16() != 200 {
+            log::error!("Recieved non 200 status, response = {:?}", resp);
+        }
+        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let text = resp.text()?;
+        log::debug!("text = {:?}", text);
+
+        let items_and_profiles: ItemsAndProfiles = serde_json::from_str(&text)?;
+        let items = items_and_profiles.items;
+        let profiles = items_and_profiles.profiles;
+        let updates = (items, profiles);
+        log::debug!("updates = {:?}", updates);
+
+        Ok(updates)
+    }
+
 }
 
 #[cfg(test)]
@@ -185,6 +218,17 @@ mod tests {
         let client = JsonClient::new();
         let ids = client.top_story_ids()?;
         log::debug!("ids = {:?}", ids);
+
+        Ok(())
+    }
+    
+    #[test]
+    fn test_get_updates() -> Result<(), Box<dyn Error>> {
+        setup();
+
+        let client = JsonClient::new();
+        let updates = client.get_updates()?;
+        log::debug!("updates = {:?}", updates);
 
         Ok(())
     }

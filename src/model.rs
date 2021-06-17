@@ -178,6 +178,12 @@ pub mod firebase {
         #[serde(rename = "pollopt")]
         PollOption(PollOption),
     }
+
+    #[derive(Serialize, Deserialize, Debug)]
+    pub(crate) struct ItemsAndProfiles {
+        pub items: Vec<Id>,
+        pub profiles: Vec<String>,
+    }
     
     impl Item {
         pub fn is_job(&self) -> bool {
