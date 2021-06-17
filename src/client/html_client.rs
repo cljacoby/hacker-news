@@ -242,7 +242,7 @@ mod tests {
 
     use super::*;
 
-    use crate::tests::setup;
+    use crate::util::setup;
 
     #[test]
     fn test_news() -> Result<(), Box<dyn Error>> {

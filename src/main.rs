@@ -1,7 +1,7 @@
 use std::env;
 use std::error::Error;
 // use env_logger;
-use hacker_news::init_logger;
+use hacker_news::util::init_logger;
 use hacker_news::cli::HnCommand;
 use hacker_news::cli::hacker_news::HackerNews;
 

@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::client::Client;
+use crate::client::html_client::Client;
 use clap::App;
 use clap::SubCommand;
 use clap::Arg;
