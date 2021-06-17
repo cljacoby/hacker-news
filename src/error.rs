@@ -11,6 +11,8 @@ pub enum HnError {
     UnauthenticatedError,
     // Error used when a client fails to authenticate
     AuthenticationError,
+    // Error raised from a failure during an HTTP request/response 
+    HttpError,
 }
 
 impl Display for HnError {
@@ -24,6 +26,9 @@ impl Display for HnError {
             }
             HnError::AuthenticationError => {
                 write!(f, "A client failed to authenticate. Please check credential information, and authentication frequency")
+            }
+            HnError::HttpError => {
+                write!(f, "A client failed during an HTTP request/response.")
             }
         }
     }

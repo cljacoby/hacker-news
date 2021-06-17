@@ -1,21 +1,15 @@
 use std::error::Error;
 use serde_json;
 use reqwest;
+use reqwest::blocking::Client;
+use reqwest::blocking::Request;
+use reqwest::blocking::Response;
+use crate::error::HnError;
 use crate::model::Id;
 use crate::model::firebase::User;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
     
-
-// [DONE] Get User By ID
-// [DONE] Max Item ID
-// [DONE] New and Top Stories
-// [DONE] Ask HN Stories
-// Show HN Stories
-// Job HN Stories
-// [DONE] Changed Items and Profiles
-
-
 pub struct JsonClient {
     http_client: reqwest::blocking::Client,
 }
@@ -26,8 +20,26 @@ impl JsonClient {
 
     pub fn new() -> Self {
         Self {
-            http_client: reqwest::blocking::Client::new()
+            http_client: Client::new(), 
         }
+    }
+    
+    fn send(&self, req: Request) -> Result<Response, Box<dyn Error>> {
+        let resp = self.http_client.execute(req)?;
+        if resp.status().as_u16() != 200 {
+            log::error!("Recieved non 200 status, response = {:?}", resp);
+            return Err(Box::new(HnError::HttpError));
+        }
+        log::debug!("Recieved 200 status, response = {:?}", resp);
+
+        Ok(resp)
+    }
+    
+    fn get_url(&self, url: &String) -> Result<Response, Box<dyn Error>> {
+        let req = self.http_client.get(url);
+        let resp = self.send(req.build()?)?;
+
+        Ok(resp)
     }
 
     pub fn item(&self, id: Id) -> Result <Item, Box<dyn Error>> {
@@ -35,19 +47,12 @@ impl JsonClient {
             base_url=BASE_URL,
             id=id
         );
-        
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let item: Item = serde_json::from_str(&text)?;
         log::debug!("item = {:?}", item);
-        
 
         Ok(item)
     }
@@ -57,15 +62,9 @@ impl JsonClient {
             base_url=BASE_URL,
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let id: Id = serde_json::from_str(&text)?;
         log::debug!("maxitem = {:?}", id);
 
@@ -78,15 +77,9 @@ impl JsonClient {
             id=username
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let user: User = serde_json::from_str(&text)?;
         log::debug!("user = {:?}", user);
 
@@ -103,15 +96,9 @@ impl JsonClient {
             base_url=BASE_URL,
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let ids: Vec<Id> = serde_json::from_str(&text)?;
         log::debug!("ids = {:?}", ids);
 
@@ -123,15 +110,9 @@ impl JsonClient {
             base_url=BASE_URL,
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let ids: Vec<Id> = serde_json::from_str(&text)?;
         log::debug!("ids = {:?}", ids);
 
@@ -143,15 +124,9 @@ impl JsonClient {
             base_url=BASE_URL,
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let items_and_profiles: ItemsAndProfiles = serde_json::from_str(&text)?;
         let items = items_and_profiles.items;
         let profiles = items_and_profiles.profiles;
@@ -165,16 +140,9 @@ impl JsonClient {
         let url = format!("{base_url}/askstories.json",
             base_url=BASE_URL,
         );
-        
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let ids: Vec<Id> = serde_json::from_str(&text)?;
         log::debug!("ids = {:?}", ids);
 
@@ -186,15 +154,9 @@ impl JsonClient {
             base_url=BASE_URL,
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let ids: Vec<Id> = serde_json::from_str(&text)?;
         log::debug!("ids = {:?}", ids);
 
@@ -206,15 +168,9 @@ impl JsonClient {
             base_url=BASE_URL,
         );
         
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-        }
-        log::debug!("Recieved 200 status, response = {:?}", resp);
+        let resp = self.get_url(&url)?;
         let text = resp.text()?;
         log::debug!("text = {:?}", text);
-
         let ids: Vec<Id> = serde_json::from_str(&text)?;
         log::debug!("ids = {:?}", ids);
 
