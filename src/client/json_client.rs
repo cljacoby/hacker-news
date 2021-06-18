@@ -1,4 +1,5 @@
 use std::error::Error;
+use log;
 use serde_json;
 use reqwest;
 use reqwest::blocking::Client;

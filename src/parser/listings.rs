@@ -1,4 +1,5 @@
 use std::error::Error;
+use log;
 use lazy_static::lazy_static;
 use scraper::Html;
 use scraper::Selector;

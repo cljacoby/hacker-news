@@ -1,4 +1,5 @@
 use std::error::Error;
+use log;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use lazy_static::lazy_static;
@@ -13,7 +14,6 @@ use scraper;
 use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
-use log;
 use crate::error::HnError;
 use crate::parser::HtmlParse;
 use crate::parser::ListingsParser;

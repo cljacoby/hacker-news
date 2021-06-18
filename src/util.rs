@@ -1,5 +1,6 @@
 use std::io::Write;
 use env_logger::Builder;
+use log;
 use log::LevelFilter;
 use std::sync::Once;
 

@@ -1,4 +1,5 @@
 use std::error::Error;
+use log;
 use scraper::Html;
 use scraper::ElementRef;
 use scraper::Selector;
