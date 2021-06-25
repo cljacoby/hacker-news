@@ -31,7 +31,19 @@ impl HtmlParse for CommentsParser {
 
     fn parse(html: &Html) -> Result<Self::Item, Box<dyn Error>> {
         let mut comments = Vec::new();
-        let root = Self::query_comment_root(html)?;
+
+        let root = match Self::query_comment_root(html)? {
+            Some(root) => root,
+            None => {
+                // TODO: Is it possible there are other erroneous reasones this branch could get
+                // hit? It could be misleading if you get an empty Vec of comments if the HTML page
+                // itself was bad.
+
+                // If querying comment root gets no results, then this Id has no comments
+                return Ok(comments);
+            }
+        };
+
         for node in root.select(&QS_COMMENT) {
             let id = Self::parse_id(&node)?;
             let text = Self::parse_text(&node, id)?;
@@ -53,12 +65,11 @@ impl HtmlParse for CommentsParser {
 
 impl CommentsParser {
 
-    fn query_comment_root(html: &Html) -> Result<ElementRef, Box<dyn Error>> {
+    fn query_comment_root(html: &Html) -> Result<Option<ElementRef>, Box<dyn Error>> {
         // Note: This uses the first comment table found. There shouldn't ever
         // be more than one comment table; however, as is there is not an explicit check
         let root = html.select(&QS_COMMENT_TABLE)
-            .next()
-            .ok_or(HnError::HtmlParsingError)?;
+            .next();
 
         Ok(root)
     }

@@ -1,5 +1,4 @@
 use std::env;
-use log;
 use std::error::Error;
 use env_logger;
 use hacker_news::cli::HnCommand;

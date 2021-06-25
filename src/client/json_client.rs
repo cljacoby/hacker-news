@@ -6,6 +6,7 @@ use reqwest::blocking::Client;
 use reqwest::blocking::Request;
 use reqwest::blocking::Response;
 use crate::error::HnError;
+use crate::error::HttpError;
 use crate::model::Id;
 use crate::model::firebase::User;
 use crate::model::firebase::Item;
@@ -27,9 +28,14 @@ impl JsonClient {
     
     fn send(&self, req: Request) -> Result<Response, Box<dyn Error>> {
         let resp = self.http_client.execute(req)?;
-        if resp.status().as_u16() != 200 {
-            log::error!("Recieved non 200 status, response = {:?}", resp);
-            return Err(Box::new(HnError::HttpError));
+        let status = resp.status().as_u16();
+        if status != 200 {
+            let err = HttpError {
+                url:  resp.url().to_string(),
+                code: status,
+            };
+            log::error!("Recieved non 200 status: {:?}", err);
+            return Err(Box::new(HnError::HttpError(err)));
         }
         log::debug!("Recieved 200 status, response = {:?}", resp);
 
@@ -186,6 +192,16 @@ mod tests {
     use super::JsonClient;
     use std::error::Error;
     use crate::util::setup;
+
+
+    #[test]
+    fn test_get_invalid_url() -> Result<(), Box<dyn Error>> {
+        let client = JsonClient::new();
+        let url = format!("https://www.google.com/invalid_path");
+        let _resp = client.get_url(&url)?;
+
+        Ok(())
+    }
 
     #[test]
     fn test_item() -> Result<(), Box<dyn Error>> {
