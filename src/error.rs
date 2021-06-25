@@ -3,6 +3,12 @@ use std::fmt::Display;
 use std::fmt;
 
 #[derive(Debug)]
+pub struct HttpError {
+    pub code: u16,
+    pub url: String,
+}
+
+#[derive(Debug)]
 pub enum HnError {
     // Error used when parsing of an HTML document fails
     HtmlParsingError,
@@ -12,7 +18,7 @@ pub enum HnError {
     // Error used when a client fails to authenticate
     AuthenticationError,
     // Error raised from a failure during an HTTP request/response 
-    HttpError,
+    HttpError(HttpError),
 }
 
 impl Display for HnError {
@@ -27,8 +33,11 @@ impl Display for HnError {
             HnError::AuthenticationError => {
                 write!(f, "A client failed to authenticate. Please check credential information, and authentication frequency")
             }
-            HnError::HttpError => {
-                write!(f, "A client failed during an HTTP request/response.")
+            HnError::HttpError(http_err) => {
+                write!(f, "A client failed during an HTTP request/response; url '{}', code '{}'",
+                    http_err.url,
+                    http_err.code,
+                )
             }
         }
     }

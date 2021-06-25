@@ -14,6 +14,7 @@ use scraper;
 use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
+use crate::error::HttpError;
 use crate::error::HnError;
 use crate::parser::HtmlParse;
 use crate::parser::ListingsParser;
@@ -173,10 +174,21 @@ impl Client {
     }
     
     pub fn item(&self, id: Id) -> Result<Listing, Box<dyn Error>> {
-        // Retrieve front page HTML
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
+        log::debug!("Send GET request to {:?}", url);
         let resp = req.send()?;
+        let status = resp.status().as_u16();
+        if status != 200 {
+            let err = HttpError {
+                url: resp.url().to_string(),
+                code: status,
+            };
+            log::error!("Received non-200 response: {:?}", err);
+            return Err(Box::new(HnError::HttpError(err)));
+        }
+        log::debug!("Received 200 response from {:?}", url);
+
         let text = resp.text()?;
         let html = Html::parse_document(&text);
 
@@ -195,6 +207,7 @@ impl Client {
     // in to something more well connected to the actual data model (i.e. posts,
     // comments, users, etc.)
     pub fn _comments(&self, id: Id) -> Result<Vec<Comment>, Box<dyn Error>> {
+        log::debug!("HTML client attempting comments for id = {:?}", id);
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
         let resp = req.send()?;
@@ -261,6 +274,16 @@ mod tests {
         let client = Client::new("filler_user", "filler_pwd");
         let item = client.item(25925926)?;
         log::debug!("test_item item = {:#?}", item);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_comments() -> Result<(), Box<dyn Error>> {
+        setup();
+        let client = Client::new("", "");
+        let comments = client._comments(100)?;
+        log::debug!("comments = {:?}", comments);
 
         Ok(())
     }
