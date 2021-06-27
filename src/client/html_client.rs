@@ -20,7 +20,7 @@ use crate::parser::HtmlParse;
 use crate::parser::ListingsParser;
 use crate::parser::CommentsParser;
 use crate::parser::extract_fnid;
-use crate::parser::create_comment_tree;
+use crate::parser::comments::create_comment_tree;
 use crate::model::Id;
 use crate::model::Listing;
 use crate::model::Date;
