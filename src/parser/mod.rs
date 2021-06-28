@@ -1,11 +1,9 @@
 use std::error::Error;
-use std::collections::VecDeque;
 use lazy_static::lazy_static;
 use regex::Regex;
 use scraper;
 use scraper::Html;
 use scraper::ElementRef;
-use crate::model::Comment;
 use crate::error::HnError;
 
 pub mod comments;
@@ -33,9 +31,6 @@ lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();
 }
 
-const COMMENT_INDENT_INCR: u32 = 40;
-
-
 pub fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn Error>> {
     let text = el.html();
     let captures = match FNID_REGEX.captures(&text) {
@@ -54,46 +49,5 @@ pub fn extract_fnid(el: &ElementRef) -> Result<String, Box<dyn Error>> {
     };
 
     Ok(fnid)
-}
-
-pub fn extract_comments(html: &Html) -> Result<Vec<Comment>, Box<dyn Error>> {
-    let comments = CommentsParser::parse(html)?;
-
-    Ok(comments)
-
-}
-
-pub fn create_comment_tree(comments: Vec<Comment>) -> Vec<Comment> {
-    let mut q = VecDeque::from(comments);
-    let mut forest = Vec::new();
-
-    while let Some(root) = q.pop_front() {
-        forest.push(root);
-        let ptr = forest.last_mut().unwrap();
-        _create_comment_tree(&mut q, ptr);
-    }
-
-    forest
-}
-
-#[allow(clippy::comparison_chain)]
-fn _create_comment_tree(q: &mut VecDeque<Comment>, parent: &mut Comment) {
-    let mut last: Option<&mut Comment> = None;
-    while let Some(c) = q.front() {
-        if c.indent == parent.indent + COMMENT_INDENT_INCR {
-            let c = q.pop_front().unwrap();
-            parent.children.push(c);
-            last = Some(parent.children.last_mut().unwrap());
-        }
-        else if c.indent > parent.indent + COMMENT_INDENT_INCR {
-            let next_parent = last.take()
-                .expect("Jumped a nesting level in comment node hierarchy");
-            _create_comment_tree(q, next_parent);
-        }
-        else {
-            return;
-        }
-    }
-
 }
 
