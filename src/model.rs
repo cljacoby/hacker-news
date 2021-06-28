@@ -8,6 +8,12 @@ pub type Id=u32;
 pub struct Date(pub u16, pub u8, pub u8);
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Thread {
+    pub listing: Listing,
+    pub comments: Vec<Comment>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Listing {
     pub title: String,
     pub id: Id,

@@ -8,10 +8,10 @@ use crate::client::html_client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
 
-pub struct Comments;
+pub struct Thread;
 
-impl HnCommand for Comments {
-    const NAME: &'static str = "comments";
+impl HnCommand for Thread {
+    const NAME: &'static str = "thread";
 
     fn parser<'a, 'b>() -> App<'a, 'b> {
         SubCommand::with_name(Self::NAME).arg(
@@ -31,9 +31,8 @@ impl HnCommand for Comments {
         let id: Id = id.parse()?;
 
         let client = Client::new("test", "test");
-
-        let comments = client._comments(id)?;
-        let json = serde_json::to_string(&comments)?;
+        let thread = client.thread(id)?;
+        let json = serde_json::to_string(&thread)?;
         println!("{}", json);
 
         Ok(())

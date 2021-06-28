@@ -24,7 +24,7 @@ use crate::parser::comments::create_comment_tree;
 use crate::model::Id;
 use crate::model::Listing;
 use crate::model::Date;
-use crate::model::Comment;
+use crate::model::Thread;
 
 
 const URL_LOGIN: &str = "https://news.ycombinator.com/login";
@@ -203,10 +203,7 @@ impl Client {
         Ok(item)
     }
 
-    // TODO: I don't love this with respect to API ergonomics. Refactor this functionality
-    // in to something more well connected to the actual data model (i.e. posts,
-    // comments, users, etc.)
-    pub fn _comments(&self, id: Id) -> Result<Vec<Comment>, Box<dyn Error>> {
+    pub fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
         log::debug!("HTML client attempting comments for id = {:?}", id);
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
@@ -214,9 +211,20 @@ impl Client {
         let text = resp.text()?;
         let html = Html::parse_document(&text);
         let comments = CommentsParser::parse(&html)?;
-        let comment_tree = create_comment_tree(comments);
+        let comments = create_comment_tree(comments);
+        let listings = ListingsParser::parse(&html)?;
+        if listings.len() > 1 {
+            log::warn!("Parsed multiple listings for a thread, where only 1 is expected");
+        }
+        let listing = listings.into_iter()
+            .next()
+            .ok_or_else(|| {
+                log::error!("Succesfully parsed HTML, but found no listings");
+                HnError::HtmlParsingError
+            })?;
+        let thread = Thread { listing, comments };
         
-        Ok(comment_tree)
+        Ok(thread)
     }
 
     pub fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {

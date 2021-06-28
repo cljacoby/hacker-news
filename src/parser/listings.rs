@@ -57,7 +57,7 @@ impl HtmlParse for ListingsParser {
 
 impl ListingsParser {
 
-    // This function identified the subtext node for a listing, which contains
+    // This function identifies the subtext node for a listing, which contains
     // some of the key fields. The subtext node is the next adjacent sibling node
     // from the listing root node (i.e. the node located by the query selector QS_LISTING).
     // There are no other distinguishing features to otherwise query this node with a
@@ -78,6 +78,10 @@ impl ListingsParser {
         Ok(element_ref)
     }
     
+    fn parse_listing_text(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
+        unimplemented!()
+    }
+
     fn query_title_node<'a>(node: &'a ElementRef, id: Id) -> Result<ElementRef<'a>, Box<dyn Error>> {
         let title_node = node.select(&QS_LISTING_TITLE)
             .next()
