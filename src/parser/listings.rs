@@ -5,27 +5,13 @@ use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
 use selectors::attr::CaseSensitivity;
+use crate::parser;
 use crate::parser::HtmlParse;
 use crate::parser::ancestor;
 use crate::error::HnError;
 use crate::model::Listing;
 use crate::model::Id;
 use crate::model::Score;
-
-/*
- * Examples of different table.fatitem row counts:
- *
- * AskHN, len=6, https://news.ycombinator.com/item?id=27650775
- * Jobs, len=2, https://news.ycombinator.com/item?id=27660734
- * Story, len=4, https://news.ycombinator.com/item?id=27649211
- *
- * First row is always the title node.
- * Second row is always subtext node; however, subtext only optionally has comment count,
- *   author, score, etc. Sometimes it only has the hide link (i.e. with jobs)
- * Third row (if present), is a spacer
- * Fourth row (if present) can either be the comment submission box, or the post's text
- *   depending on whether the OP had text assocaited with it
- * */
 
 lazy_static! {
     // Applied to root of HTML document
@@ -40,14 +26,12 @@ lazy_static! {
 
     // Applied to the table root node of a listing; either table.fatitem, or table.itemlist
     static ref QS_TBODY: Selector = Selector::parse("tbody").unwrap();
-}
 
+    // Applied to the tbody node of a listing's table
+    static ref QS_TR: Selector = Selector::parse("tr").unwrap();
 
-// TODO: Add a description on what this is and why we need it.
-#[derive(Debug)]
-enum ListingType {
-    ItemList,
-    FatItem(usize),
+    // Applied to the 'tr' node containing a listing's associated text
+    static ref QS_MORE_TEXT: Selector = Selector::parse("p").unwrap();
 }
 
 pub struct ListingsParser;
@@ -60,17 +44,10 @@ impl HtmlParse for ListingsParser {
         for node in html.select(&QS_LISTING) {
             let id = Self::parse_id(&node)?;
             log::debug!("Attempting parse of listing for id = {:?}", id);
-            let listing_type = Self::listing_type(&node, id)?;
-            log::debug!("listing_type = {:?}", listing_type);
+            let text = Self::parse_text(&node, id)?;
+            log::debug!("text = {:?}", text);
             let subtext_node = Self::query_subtext_node(&node, id)?; 
             let title_node = Self::query_title_node(&node, id)?;
-            match listing_type {
-                ListingType::ItemList => {
-                }
-                ListingType::FatItem(rows) => {
-                    Self::parse_post_comment(&title_node, id)?;
-                }
-            }
             let user = Self::parse_user(&subtext_node, id)?;
             let score = Self::parse_score(&subtext_node, id)?;
             let title = Self::parse_title(&title_node, id)?;
@@ -81,7 +58,8 @@ impl HtmlParse for ListingsParser {
                 id,
                 score,
                 user,
-                url
+                url,
+                text
             });
         }
 
@@ -113,36 +91,59 @@ impl ListingsParser {
         Ok(element_ref)
     }
 
-    fn listing_type(node: &ElementRef, id: Id) -> Result<ListingType, Box<dyn Error>> {
-        let table = ancestor(&node, 2)
-            .ok_or_else(|| {
-                log::error!("Could not find listing table node for id = {:?}", id);
-                HnError::HtmlParsingError
-            })?;
+
+    fn parse_text(node: &ElementRef, id: Id) -> Result<Option<String>, Box<dyn Error>> {
+        let table = ancestor(&node, 2).ok_or_else(|| {
+            log::error!("Did not find listing table node for id = {:?}", id);
+            HnError::HtmlParsingError
+        })?;
         let el = table.value();
 
         if el.has_class("itemlist", CaseSensitivity::AsciiCaseInsensitive) {
-            Ok(ListingType::ItemList)
+            log::debug!("Classed listing as '.itemlist' for id = {:?}", id);
+            return Ok(None);
         }
-        else if el.has_class("fatitem", CaseSensitivity::AsciiCaseInsensitive) {
+
+        if el.has_class("fatitem", CaseSensitivity::AsciiCaseInsensitive) {
+            log::debug!("Classed listing as '.fatitem' for id = {:?}", id);
             let tbody = table.select(&QS_TBODY)
                 .next()
                 .ok_or_else(|| {
-                    log::error!("Could not locate tbody for listing id = {:?}", id);
+                    log::error!("Did not find tbody for listing id = {:?}", id);
+                    HnError::HtmlParsingError
+            })?;
+            let rows: Vec<_> = tbody.select(&QS_TR).collect();
+            log::debug!("Listing .fatitem table row count = {:?}", rows.len());
+            if rows.len() == 6 {
+                let text_node = rows.get(3)
+                    .ok_or_else(|| {
+                    log::error!("Did not find listing text node for id = {:?}", id);
                     HnError::HtmlParsingError
                 })?;
-            let rows: Vec<_> = tbody.children().collect();
-            Ok(ListingType::FatItem(rows.len()))
+                let text = Self::parse_text_helper(text_node, id)?;
+                return Ok(Some(text));
+            }
+
+            log::warn!("Classed listing as .fatitem, but row count was not 6 for id = {:?}", id);
+            return Ok(None);
         }
-        else {
-            log::error!("Found table root for listing, but could not match any expected classes. id = {:?}", id);
-            Err(Box::new(HnError::HtmlParsingError))
-        }
+
+        log::error!("Found listing table, but did not match any expected classes. id = {:?}", id);
+        Err(Box::new(HnError::HtmlParsingError))
     }
-    
-    // fn parse_listing_text(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
-    //     unimplemented!()
-    // }
+
+    fn parse_text_helper(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
+        let mut text = node.text()
+            .next()
+            .ok_or_else(|| {
+                log::error!("Did not find listing text from expected text node, id = {}", id);
+                HnError::HtmlParsingError
+            })?
+            .to_string();
+        parser::append_more_text_nodes(node, &QS_MORE_TEXT, &mut text);
+
+        Ok(text)
+    }
 
     fn query_title_node<'a>(node: &'a ElementRef, id: Id) -> Result<ElementRef<'a>, Box<dyn Error>> {
         let title_node = node.select(&QS_LISTING_TITLE)
@@ -248,38 +249,5 @@ impl ListingsParser {
 
         Ok(url)
     }
-
-    // Parse the text associated with original post. For example, the question associated with an
-    // AskHN post. The comment node is located as the 3rd adjacent sibling from the title node.
-    // fn parse_post_comment(title_node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
-    fn parse_post_comment(title_node: &ElementRef, id: Id) -> Result<(), Box<dyn Error>> {
-        let mut i = 0;
-        let n = 3;
-        let mut comment_node: Option<ElementRef> = None;
-
-        while i < n {
-            let node_ref = title_node.next_sibling().ok_or_else(|| {
-                log::error!("Did not locate comment node for '.fatitem' listing id = {:?}", id);
-                HnError::HtmlParsingError
-            })?;
-            let el = ElementRef::wrap(node_ref).ok_or_else(|| {
-                log::error!("Could not wrap node_ref for listing id = {:?}", id);
-                HnError::HtmlParsingError
-            })?;
-            comment_node = Some(el);
-            i += 1;
-        }
-
-        let comment_node = comment_node.ok_or_else(|| {
-            log::error!("Did not locate post commend node for listing id = {:?}", id);
-            HnError::HtmlParsingError
-        })?;
-        log::debug!("comment_node.html() = {:?}", comment_node.html());
-
-        Ok(())
-    }
-
-
-    
 
 }

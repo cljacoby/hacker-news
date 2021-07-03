@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use scraper;
 use scraper::Html;
+use scraper::Selector;
 use scraper::ElementRef;
 use crate::error::HnError;
 
@@ -44,12 +45,23 @@ fn ancestor<'a>(node: &'a ElementRef, height: u32) -> Option<ElementRef<'a>> {
     ElementRef::wrap(*curr_node)
 }
 
+// Search for any additional nodes of text, and append to buffer 
+fn append_more_text_nodes(node: &ElementRef, qs: &Selector, text: &mut String, ) {
+    for child in node.select(&qs) {
+        let more_text = match child.text().next() {
+            None => {
+                // This branch handles a <p> node with no inner text. With no inner
+                // text, there is nothing to append, and we simply continue
+                continue;
+            }
+            Some(more_text) => more_text,
+        };
 
-// --------------------------------------------------------
-// The code below here is from before I refactored
-// the HTML parsing logic. It should be appropriately
-// integrated into the new HTML parsing model
-// --------------------------------------------------------
+        // We add a newline since we're concatenating <p> node text together
+        text.push('\n');
+        text.push_str(&more_text);
+    }
+}
 
 lazy_static! {
     static ref FNID_REGEX: Regex =  Regex::new(r#"<input.*value="(.+?)".*>"#).unwrap();

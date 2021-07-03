@@ -21,6 +21,7 @@ pub struct Listing {
     pub user: Option<String>,
     // comments: u32,
     pub url: String,
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

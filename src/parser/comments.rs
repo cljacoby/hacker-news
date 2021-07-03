@@ -8,6 +8,7 @@ use lazy_static::lazy_static;
 use crate::model::Comment;
 use crate::error::HnError;
 use crate::model::Id;
+use crate::parser;
 use crate::parser::HtmlParse;
 
 const COMMENT_INDENT_INCR: u32 = 40;
@@ -106,23 +107,7 @@ impl CommentsParser {
                 msg.as_str().to_owned()
             })?
             .to_string();
-
-        // Search for any additional nodes of text, which appear as distinct <p> nodes
-        for child in node.select(&QS_COMMENT_MORE_TEXT) {
-            let more_text = match child.text().next() {
-                None => {
-                    // This branch handles a <p> node with no inner text.
-                    // With no inner text, there is nothing to append, and
-                    // we simply continue
-                    continue;
-                }
-                Some(more_text) => more_text,
-            };
-
-            // We add a newline since we're concatenating <p> node text together
-            text.push('\n');
-            text.push_str(&more_text);
-        }
+        parser::append_more_text_nodes(node, &QS_COMMENT_TEXT, &mut text);
 
         Ok(text)
     }
