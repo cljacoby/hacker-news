@@ -5,7 +5,7 @@ use clap::ArgMatches;
 pub(crate) mod login;
 pub(crate) mod news;
 pub(crate) mod query;
-pub(crate) mod comments;
+pub(crate) mod thread;
 pub(crate) mod tree;
 pub mod hacker_news;
 

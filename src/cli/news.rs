@@ -3,8 +3,6 @@ use clap::App;
 use clap::ArgMatches;
 use clap::SubCommand;
 use grid_printer::GridPrinter;
-use grid_printer::style::StyleOpt;
-use grid_printer::style::Fg;
 use crate::client::html_client::Client;
 use crate::cli::HnCommand;
 
@@ -35,7 +33,6 @@ impl HnCommand for News {
         };
         let printer = GridPrinter::builder(rows, cols)
             .col_spacing(4)
-            .col_style(1, StyleOpt::new().fg(Fg::Red))?
             .build();
         printer.print(&grid);
 
