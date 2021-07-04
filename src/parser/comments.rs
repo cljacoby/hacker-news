@@ -93,13 +93,13 @@ impl CommentsParser {
     fn parse_text(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
 
         // Select inner text from root of comment text node
-        let mut text = node.select(&QS_COMMENT_TEXT)
+        let text_node = node.select(&QS_COMMENT_TEXT)
             .next()
             .ok_or_else(|| {
                 log::error!("Failed to find comment text for id = {}", id);
                 HnError::HtmlParsingError
-            })?
-            .text()
+            })?;
+        let mut text = text_node.text()
             .next()
             .ok_or_else(|| {
                 log::error!("Failed to extract inner text for comment id = {}", id);
@@ -107,7 +107,7 @@ impl CommentsParser {
                 msg.as_str().to_owned()
             })?
             .to_string();
-        parser::append_more_text_nodes(node, &QS_COMMENT_TEXT, &mut text);
+        parser::append_more_text_nodes(node, &QS_COMMENT_MORE_TEXT, &mut text);
 
         Ok(text)
     }
