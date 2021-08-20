@@ -21,6 +21,7 @@ lazy_static! {
     static ref QS_COMMENT: Selector = Selector::parse("tr.athing.comtr").unwrap();
     
     // Applied to comment node (i.e. node `tr.athing.comtr`)
+    static ref QS_COMMENT_DEAD: Selector = Selector::parse("div.comment").unwrap();
     static ref QS_COMMENT_TEXT: Selector = Selector::parse("span.commtext").unwrap();
     static ref QS_COMMENT_MORE_TEXT: Selector = Selector::parse("span.commtext p").unwrap();
     static ref QS_COMMENT_USER: Selector = Selector::parse("a.hnuser").unwrap();
@@ -38,11 +39,10 @@ impl HtmlParse for CommentsParser {
 
         let root = match Self::query_comment_root(html)? {
             Some(root) => root,
+            // TODO: Is it possible there are other erroneous reasones the 'None' branch could get
+            // hit? It could be misleading if you get an empty Vec of comments if the HTML page
+            // itself was bad.
             None => {
-                // TODO: Is it possible there are other erroneous reasones this branch could get
-                // hit? It could be misleading if you get an empty Vec of comments if the HTML page
-                // itself was bad.
-
                 // If querying comment root gets no results, then this Id has no comments
                 return Ok(comments);
             }
@@ -50,7 +50,13 @@ impl HtmlParse for CommentsParser {
 
         for node in root.select(&QS_COMMENT) {
             let id = Self::parse_id(&node)?;
-            let text = Self::parse_text(&node, id)?;
+            log::debug!("Parsing comment id={:?}", id);
+            let dead = Self::parse_dead_flag(&node, id)?;
+            log::debug!("Comment id={:?} is dead={:?}", id, dead);
+            let text = match dead {
+                true => None,
+                false => Self::parse_text(&node, id)?,
+            };
             let user = Self::parse_user(&node, id)?;
             let indent = Self::parse_indent(&node, id)?;
             let children = Vec::new();
@@ -59,6 +65,7 @@ impl HtmlParse for CommentsParser {
                 id,
                 text,
                 indent,
+                dead,
                 children 
             });
         }
@@ -90,26 +97,61 @@ impl CommentsParser {
         Ok(id)
     }
 
-    fn parse_text(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {
+    fn parse_dead_flag(node: &ElementRef, id: Id) -> Result<bool, Box<dyn Error>> {
+        let comment_div = node.select(&QS_COMMENT_DEAD)
+        .next()
+        .ok_or_else(|| {
+            log::error!("Failed to find node 'div.comment' for id = {:?}", id);
+            HnError::HtmlParsingError
+        })?;
+
+        match comment_div.text().next() {
+            None => Ok(false),
+            Some(text) => if text.contains("[flagged]") {
+                Ok(true)
+            } else {
+                Ok(false)
+            },
+        }
+    }
+
+    fn parse_text(node: &ElementRef, id: Id) -> Result<Option<String>, Box<dyn Error>> {
 
         // Select inner text from root of comment text node
-        let text_node = node.select(&QS_COMMENT_TEXT)
-            .next()
-            .ok_or_else(|| {
-                log::error!("Failed to find comment text for id = {}", id);
-                HnError::HtmlParsingError
-            })?;
-        let mut text = text_node.text()
-            .next()
-            .ok_or_else(|| {
-                log::error!("Failed to extract inner text for comment id = {}", id);
-                let msg = format!("Failed to extract inner text for comment id = {}", id);
-                msg.as_str().to_owned()
-            })?
-            .to_string();
+        // let text_node = node.select(&QS_COMMENT_TEXT)
+        //     .next()
+        //     .ok_or_else(|| {
+        //         log::error!("Failed to find comment text for id = {}", id);
+        //         HnError::HtmlParsingError
+        //     })?;
+
+        let text_node = match node.select(&QS_COMMENT_TEXT).next() {
+            Some(text_node) => text_node,
+            None => {
+                log::warn!("Did not find comment text node for id = {}", id);
+                return Ok(None);
+            }
+        };
+
+        // let mut text = text_node.text()
+        //     .next()
+        //     .ok_or_else(|| {
+        //         log::error!("Failed to extract inner text for comment id = {}", id);
+        //         let msg = format!("Failed to extract inner text for comment id = {}", id);
+        //         msg.as_str().to_owned()
+        //     })?
+        //     .to_string();
+
+        let mut text = match text_node.text().next() {
+            Some(text) => text.to_string(),
+            None => {
+                log::warn!("Failed to extract inner text for comment id = {}", id);
+                return Ok(None);
+            }
+        };
         parser::append_more_text_nodes(node, &QS_COMMENT_MORE_TEXT, &mut text);
 
-        Ok(text)
+        Ok(Some(text))
     }
 
     fn parse_user(node: &ElementRef, id: Id) -> Result<String, Box<dyn Error>> {

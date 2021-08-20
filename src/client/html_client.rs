@@ -290,7 +290,7 @@ mod tests {
     fn test_comments() -> Result<(), Box<dyn Error>> {
         setup();
         let client = Client::new("", "");
-        let comments = client._comments(100)?;
+        let comments = client.thread(100)?;
         log::debug!("comments = {:?}", comments);
 
         Ok(())
