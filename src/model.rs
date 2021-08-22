@@ -28,9 +28,9 @@ pub struct Listing {
 pub struct Comment {
     pub user: String,
     pub id: Id,
-    pub text: String,
+    pub text: Option<String>,
     pub indent: u32,
-    // pub bool: deleted,
+    pub dead: bool,
     pub children: Vec<Comment>,
 }
 
