@@ -18,6 +18,7 @@ pub struct JsonClient {
 
 const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
 
+#[allow(clippy::new_without_default)]
 impl JsonClient {
 
     pub fn new() -> Self {
@@ -42,7 +43,7 @@ impl JsonClient {
         Ok(resp)
     }
     
-    fn get_url(&self, url: &String) -> Result<Response, Box<dyn Error>> {
+    fn get_url(&self, url: &str) -> Result<Response, Box<dyn Error>> {
         let req = self.http_client.get(url);
         let resp = self.send(req.build()?)?;
 

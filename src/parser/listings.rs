@@ -93,7 +93,7 @@ impl ListingsParser {
 
 
     fn parse_text(node: &ElementRef, id: Id) -> Result<Option<String>, Box<dyn Error>> {
-        let table = ancestor(&node, 2).ok_or_else(|| {
+        let table = ancestor(node, 2).ok_or_else(|| {
             log::error!("Did not find listing table node for id = {:?}", id);
             HnError::HtmlParsingError
         })?;

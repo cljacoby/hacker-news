@@ -194,42 +194,25 @@ pub mod firebase {
     
     impl Item {
         pub fn is_job(&self) -> bool {
-            match self {
-                Self::Job(_job) => true,
-                _ => false,
-            }
+            matches!(self, Self::Job(_job))
         }
 
         pub fn is_story(&self) -> bool {
-            match self {
-                Self::Story(_story) => true,
-                _ => false,
-            }
+            matches!(self, Self::Story(_story))
         }
         
         pub fn is_comment(&self) -> bool {
-            match self {
-                Self::Comment(_comment) => true,
-                _ => false,
-            }
+            matches!(self, Self::Comment(_comment))
         }
 
         pub fn is_poll(&self) -> bool {
-            match self {
-                Self::Poll(_poll) => true,
-                _ => false,
-            }
+            matches!(self, Self::Poll(_poll))
         }
         
         pub fn is_poll_option(&self) -> bool {
-            match self {
-                Self::PollOption(_poll_opt) => true,
-                _ => false,
-            }
+            matches!(self, Self::PollOption(_poll_opt))
         }
-    
     }
-
 }
 
 

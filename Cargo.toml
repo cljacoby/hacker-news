@@ -1,6 +1,6 @@
 [package]
 name = "hacker-news"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["cljacoby <cljacoby@gmail.com>"]
 description = "A library to interact with Hacker News."
 edition = "2018"

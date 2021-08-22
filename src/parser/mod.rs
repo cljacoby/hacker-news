@@ -47,7 +47,7 @@ fn ancestor<'a>(node: &'a ElementRef, height: u32) -> Option<ElementRef<'a>> {
 
 // Search for any additional nodes of text, and append to buffer 
 fn append_more_text_nodes(node: &ElementRef, qs: &Selector, text: &mut String, ) {
-    for child in node.select(&qs) {
+    for child in node.select(qs) {
         match child.text().next() {
             None => {
                 // This branch handles a <p> node with no inner text. With no inner
@@ -57,7 +57,7 @@ fn append_more_text_nodes(node: &ElementRef, qs: &Selector, text: &mut String, )
             Some(more_text) => {
                 // We add a newline since we're concatenating <p> node text together
                 text.push('\n');
-                text.push_str(&more_text);
+                text.push_str(more_text);
             },
         }
     }
