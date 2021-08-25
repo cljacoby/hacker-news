@@ -29,7 +29,7 @@ impl HnCommand for Query {
         };
         let id: Id = id.parse()?;
 
-        let client = Client::new("test", "test");
+        let client = Client::new();
         let item = client.item(id)?;
         println!("item = {:#?}", item);
         

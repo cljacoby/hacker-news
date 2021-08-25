@@ -194,16 +194,6 @@ mod tests {
     use std::error::Error;
     use crate::util::setup;
 
-
-    #[test]
-    fn test_get_invalid_url() -> Result<(), Box<dyn Error>> {
-        let client = JsonClient::new();
-        let url = format!("https://www.google.com/invalid_path");
-        let _resp = client.get_url(&url)?;
-
-        Ok(())
-    }
-
     #[test]
     fn test_item() -> Result<(), Box<dyn Error>> {
         setup();

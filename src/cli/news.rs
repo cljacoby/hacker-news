@@ -17,7 +17,7 @@ impl HnCommand for News {
     }
 
     fn cmd(_matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-        let client = Client::new("", "");
+        let client = Client::new();
         let listings = client.news()?;
         let grid: Vec<Vec<String>> = listings.into_iter().map(|l| vec![
             l.id.clone().to_string(),
