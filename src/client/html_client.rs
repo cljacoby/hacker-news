@@ -37,17 +37,13 @@ lazy_static! {
 
 pub struct Client {
     http_client: reqwest::blocking::Client,
-    username: String,
-    password: String,
     cookie: RefCell<Option<(String, String)>>,
 }
 
 impl Client {
 
-    pub fn new(username: &str, password: &str) -> Self {
+    pub fn new() -> Self {
         Self {
-            username: String::from(username),
-            password: String::from(password),
             http_client: reqwest::blocking::Client::new(),
             cookie: RefCell::new(None),
         }
@@ -126,10 +122,10 @@ impl Client {
         Ok(fnid)
     }
 
-    pub fn login(&self) -> Result<(), Box<dyn Error>> {
+    pub fn login(&self, username: &str, password: &str) -> Result<(), Box<dyn Error>> {
         let mut formdata = HashMap::new();
-        formdata.insert("acct", &self.username);
-        formdata.insert("pw", &self.password);
+        formdata.insert("acct", username);
+        formdata.insert("pw", password);
         let goto = "newest".to_string();
         formdata.insert("goto", &goto);
 
@@ -268,7 +264,7 @@ mod tests {
     #[test]
     fn test_news() -> Result<(), Box<dyn Error>> {
         setup();
-        let client = Client::new("filler_user", "filler_pwd");
+        let client = Client::new();
         let listings = client.news()?;
         log::info!("Successfully called Client::news()");
         log::trace!("Listings output from Client::news() = {:?}", listings);
@@ -279,7 +275,7 @@ mod tests {
     #[test]
     fn test_item() -> Result<(), Box<dyn Error>> {
         setup();
-        let client = Client::new("filler_user", "filler_pwd");
+        let client = Client::new();
         let item = client.item(25925926)?;
         log::debug!("test_item item = {:#?}", item);
 
@@ -289,7 +285,7 @@ mod tests {
     #[test]
     fn test_comments() -> Result<(), Box<dyn Error>> {
         setup();
-        let client = Client::new("", "");
+        let client = Client::new();
         let comments = client.thread(100)?;
         log::debug!("comments = {:?}", comments);
 
@@ -317,8 +313,8 @@ mod tests {
             }
         };
         
-        let client = Client::new(&user, &pwd);
-        client.login()?;
+        let client = Client::new();
+        client.login(&user, &pwd)?;
 
         Ok(())
     }

@@ -38,11 +38,11 @@ impl HnCommand for Login {
             .value_of("username")
             .ok_or("username is required for login")?;
         let password = matches
-        .value_of("password")
-        .ok_or("password is required for login")?;
+            .value_of("password")
+            .ok_or("password is required for login")?;
         
-        let client = Client::new(username, password);
-        client.login()?;
+        let client = Client::new();
+        client.login(username, password)?;
 
         Ok(())
     }

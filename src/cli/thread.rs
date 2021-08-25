@@ -30,7 +30,7 @@ impl HnCommand for Thread {
         };
         let id: Id = id.parse()?;
 
-        let client = Client::new("test", "test");
+        let client = Client::new();
         let thread = client.thread(id)?;
         let json = serde_json::to_string(&thread)?;
         println!("{}", json);
