@@ -227,6 +227,10 @@ impl Client {
         self.listings("https://news.ycombinator.com/news")
     }
 
+    pub fn newest(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
+        self.listings("https://news.ycombinator.com/newest")
+    }
+
     pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<dyn Error>> {
         let url = format!("https://news.ycombinator.com/front?day={}-{}-{}",
             date.0, date.1, date.2);
