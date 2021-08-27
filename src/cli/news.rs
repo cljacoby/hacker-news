@@ -19,12 +19,20 @@ impl HnCommand for News {
     fn cmd(_matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let client = Client::new();
         let listings = client.news()?;
-        let grid: Vec<Vec<String>> = listings.into_iter().map(|l| vec![
-            l.id.clone().to_string(),
-            l.score.unwrap_or(0).to_string(),
-            l.user.clone().unwrap_or_else(|| "".to_string()),
-            l.title,
-        ]).collect();
+        let grid: Vec<Vec<String>> = listings.iter().map(|l| {
+            vec![
+                format!("{}", l.id),
+                match l.score {
+                    Some(score) => format!("{}", score),
+                    None => "".to_string(),
+                },
+                match l.user {
+                    Some(ref user) => format!("{}", user.clone()),
+                    None => "".to_string(),
+                },
+                format!("{}", l.title)
+            ]
+        }).collect();
 
         let rows = grid.len();
         let cols = match grid.get(0) {
