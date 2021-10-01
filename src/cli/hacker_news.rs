@@ -6,6 +6,7 @@ use crate::cli::tree::Tree;
 use crate::cli::login::Login;
 use crate::cli::query::Query;
 use crate::cli::news::News;
+use crate::cli::newest::Newest;
 use crate::cli::thread::Thread;
 
 /// Top level parser/cmd for the cli
@@ -19,6 +20,7 @@ impl HnCommand for HackerNews {
             .subcommand(Query::parser())
             .subcommand(Tree::parser())
             .subcommand(News::parser())
+            .subcommand(Newest::parser())
             .subcommand(Login::parser())
             .subcommand(Thread::parser())
     }
@@ -28,6 +30,7 @@ impl HnCommand for HackerNews {
             (Query::NAME, Some(matches)) => Query::cmd(matches),
             (Tree::NAME, Some(matches)) => Tree::cmd(matches),
             (News::NAME, Some(matches)) => News::cmd(matches),
+            (Newest::NAME, Some(matches)) => Newest::cmd(matches),
             (Login::NAME, Some(matches)) => Login::cmd(matches),
             (Thread::NAME, Some(matches)) => Thread::cmd(matches),
             // Lack of a subcommand defaults to listing the current HN front page

@@ -207,10 +207,15 @@ impl ListingsParser {
             .ok_or_else(|| {
                 log::error!("Failed to obtain score text from listing score node, id = {}", id);
                 HnError::HtmlParsingError
-            })?;
+        })?;
 
-        let score = text.strip_suffix(" points")
-            .ok_or_else(|| {
+        // TODO: Kind of a hack to handle stripping of "points" vs. "point". Is it possible
+        // and possibly more performant to use a refex?
+        let opt = match text.starts_with("1 ") {
+            true => text.strip_suffix(" point"),
+            false => text.strip_suffix(" points"),
+        };
+        let score = opt.ok_or_else(|| {
                 log::error!("Failed to strip ' points' from listing score text. id = {}, text =  {},",
                     id, text);
                 HnError::HtmlParsingError
