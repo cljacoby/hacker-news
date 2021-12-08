@@ -1,5 +1,6 @@
 use std::io::Write;
 use env_logger::Builder;
+use log::Level;
 use log;
 use log::LevelFilter;
 use std::sync::Once;
@@ -13,12 +14,18 @@ pub fn setup() {
     });
 }
 
+fn log_level_to_color(level: &Level) -> &'static str {
+    match level {
+        Level::Error => "\x1b[1;31m",
+        Level::Warn => "\x1b[1;33m",
+        Level::Info => "\x1b[1;36m",
+        Level::Debug => "\x1b[1;32m",
+        Level::Trace => "\x1b[1;35m",
+    }
+}
 
-// TODO: I want to use this custom log string writer, as it in addition to providing
-// the module path it provides you with the line of source code and file path to the
-// emitting file. However, I also really want the colorization of the log level
-// that the default log function provides. This function provides a proof of concept 
-// for how the custom log string function could still provide colorization.
+// TODO: This colorizes the log level, but does not check if output is a tty, and
+// therefore will insert the ansi color escapes even if redirected to a file.
 
 pub fn init_logger() {
     let mut logger = Builder::from_default_env();
@@ -26,9 +33,10 @@ pub fn init_logger() {
     logger.format(|buf, record| {
         
         let timestamp = buf.timestamp();
-        let level = format!("{green}{level}{reset}", 
-            green = "\x1b[1;32m",
-            level = record.level(),
+        let level = record.level();
+        let level = format!("{color}{level}{reset}", 
+            color = log_level_to_color(&level),
+            level = level,
             reset = "\x1b[1;0m",
         );
         let mod_path = record.module_path().unwrap_or("Could not obtain module path");
