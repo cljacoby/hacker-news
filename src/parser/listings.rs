@@ -18,7 +18,7 @@ lazy_static! {
     static ref QS_LISTING: Selector = Selector::parse("tr.athing:not(.comtr)").unwrap();
     
     // Applied to listing node (i.e. node `tr.athing:not(.comtr)"`)
-    static ref QS_LISTING_TITLE: Selector = Selector::parse("td.title > a.storylink").unwrap();
+    static ref QS_LISTING_TITLE: Selector = Selector::parse("td.title > a.titlelink").unwrap();
 
     // Applied to listing subtext node
     static ref QS_LISTING_USER: Selector = Selector::parse("a.hnuser").unwrap();
