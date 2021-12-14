@@ -7,10 +7,12 @@ use crate::cli::login::Login;
 use crate::cli::query::Query;
 use crate::cli::news::News;
 use crate::cli::thread::Thread;
+use async_trait::async_trait;
 
 /// Top level parser/cmd for the cli
 pub struct HackerNews;
 
+#[async_trait]
 impl HnCommand for HackerNews {
     const NAME: &'static str = "hackernews";
 
@@ -23,15 +25,15 @@ impl HnCommand for HackerNews {
             .subcommand(Thread::parser())
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         match matches.subcommand() {
-            (Query::NAME, Some(matches)) => Query::cmd(matches),
-            (Tree::NAME, Some(matches)) => Tree::cmd(matches),
-            (News::NAME, Some(matches)) => News::cmd(matches),
-            (Login::NAME, Some(matches)) => Login::cmd(matches),
-            (Thread::NAME, Some(matches)) => Thread::cmd(matches),
+            (Query::NAME, Some(matches)) => Query::cmd(matches).await,
+            (Tree::NAME, Some(matches)) => Tree::cmd(matches).await,
+            (News::NAME, Some(matches)) => News::cmd(matches).await,
+            (Login::NAME, Some(matches)) => Login::cmd(matches).await,
+            (Thread::NAME, Some(matches)) => Thread::cmd(matches).await,
             // Lack of a subcommand defaults to listing the current HN front page
-            _ => News::cmd(matches),
+            _ => News::cmd(matches).await,
         }
     }
 

@@ -6,9 +6,11 @@ use clap::SubCommand;
 use crate::client::html_client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
+use async_trait::async_trait;
 
 pub struct Query;
 
+#[async_trait]
 impl HnCommand for Query {
     const NAME: &'static str = "query";
 
@@ -22,7 +24,7 @@ impl HnCommand for Query {
         )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let id = match matches.value_of("id") {
             None => unreachable!("clap will require an argument value"),
             Some(id) => id,
@@ -30,7 +32,7 @@ impl HnCommand for Query {
         let id: Id = id.parse()?;
 
         let client = Client::new();
-        let item = client.item(id)?;
+        let item = client.item(id).await?;
         println!("item = {:#?}", item);
         
         Ok(())

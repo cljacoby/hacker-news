@@ -5,9 +5,11 @@ use clap::ArgMatches;
 use clap::SubCommand;
 use crate::model::Id;
 use crate::cli::HnCommand;
+use async_trait::async_trait;
 
 pub struct Tree;
 
+#[async_trait]
 impl HnCommand for Tree {
     const NAME: &'static str = "tree";
 
@@ -31,7 +33,7 @@ impl HnCommand for Tree {
             )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         // Parse command-line argument of HackerNews ID
         let _id: Id = matches
             .value_of("id")

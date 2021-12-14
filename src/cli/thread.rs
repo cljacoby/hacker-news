@@ -7,9 +7,11 @@ use clap::SubCommand;
 use crate::client::html_client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
+use async_trait::async_trait;
 
 pub struct Thread;
 
+#[async_trait]
 impl HnCommand for Thread {
     const NAME: &'static str = "thread";
 
@@ -23,7 +25,7 @@ impl HnCommand for Thread {
         )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let id = match matches.value_of("id") {
             None => unreachable!("clap will require an argument value"),
             Some(id) => id,
@@ -31,7 +33,7 @@ impl HnCommand for Thread {
         let id: Id = id.parse()?;
 
         let client = Client::new();
-        let thread = client.thread(id)?;
+        let thread = client.thread(id).await?;
         let json = serde_json::to_string(&thread)?;
         println!("{}", json);
 

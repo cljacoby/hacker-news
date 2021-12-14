@@ -5,10 +5,12 @@ use clap::SubCommand;
 use grid_printer::GridPrinter;
 use crate::client::html_client::Client;
 use crate::cli::HnCommand;
+use async_trait::async_trait;
 
 /// Get front page listings of Hacker News.
 pub struct News;
 
+#[async_trait]
 impl HnCommand for News {
     const NAME: &'static str = "news";
 
@@ -16,9 +18,9 @@ impl HnCommand for News {
         SubCommand::with_name(Self::NAME)
     }
 
-    fn cmd(_matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    async fn cmd(_matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let client = Client::new();
-        let listings = client.news()?;
+        let listings = client.news().await?;
         let grid: Vec<Vec<String>> = listings.into_iter().map(|l| vec![
             l.id.clone().to_string(),
             l.score.unwrap_or(0).to_string(),

@@ -1,6 +1,7 @@
 use std::error::Error;
 use clap::App;
 use clap::ArgMatches;
+use async_trait::async_trait;
 
 pub(crate) mod login;
 pub(crate) mod news;
@@ -11,6 +12,7 @@ pub mod hacker_news;
 
 /// A trait defining the interface to add a subcommand to the command line
 /// application. 
+#[async_trait]
 pub trait HnCommand {
 
     /// The name of this subcommand. Will be used at the command line interface
@@ -25,5 +27,5 @@ pub trait HnCommand {
     /// The command executed when this subcommand is actually run. This function receives a
     /// [clap](https://docs.rs/clap/2.33.3/clap/index.html) ArgMatches instance, which can
     /// drive optional or argument based logic.
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>>;
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>>;
 }

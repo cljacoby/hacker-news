@@ -5,12 +5,14 @@ use clap::SubCommand;
 use clap::Arg;
 use clap::ArgMatches;
 use crate::cli::HnCommand;
+use async_trait::async_trait;
 
 /// Login with a given username and password
 
 
 pub struct Login;
 
+#[async_trait]
 impl HnCommand for Login {
     const NAME: &'static str = "login";
 
@@ -33,7 +35,7 @@ impl HnCommand for Login {
             )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
         let username = matches
             .value_of("username")
             .ok_or("username is required for login")?;
@@ -42,7 +44,7 @@ impl HnCommand for Login {
             .ok_or("password is required for login")?;
         
         let client = Client::new();
-        client.login(username, password)?;
+        // client.login(username, password).await?;
 
         Ok(())
     }

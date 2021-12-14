@@ -5,7 +5,8 @@ use std::cell::RefCell;
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest;
-use reqwest::blocking::ClientBuilder;
+// use reqwest::blocking::ClientBuilder;
+use reqwest::ClientBuilder;
 use reqwest::header::HeaderValue;
 use reqwest::header::HeaderMap;
 use reqwest::cookie::Cookie;
@@ -36,144 +37,145 @@ lazy_static! {
 }
 
 pub struct Client {
-    http_client: reqwest::blocking::Client,
-    cookie: RefCell<Option<(String, String)>>,
+    http_client: reqwest::Client,
+    // cookie: RefCell<Option<(String, String)>>,
 }
 
 impl Client {
 
     pub fn new() -> Self {
         Self {
-            http_client: reqwest::blocking::Client::new(),
-            cookie: RefCell::new(None),
+            http_client: reqwest::Client::new(),
+            // cookie: RefCell::new(None),
         }
     }
 
-    fn cookie(&self) -> Result<String, Box<dyn Error>> {
-        // Note: Chaining these causes a compiler error about dropping to early
-        let pair = self.cookie.borrow();
-        let pair = pair.as_ref().ok_or(HnError::UnauthenticatedError)?;
+    // fn cookie(&self) -> Result<String, Box<dyn Error>> {
+    //     // Note: Chaining these causes a compiler error about dropping to early
+    //     let pair = self.cookie.borrow();
+    //     let pair = pair.as_ref().ok_or(HnError::UnauthenticatedError)?;
+    //     Ok(format!("{}={};", pair.0, pair.1))
+    // }
+    // 
+    // pub async fn submit(
+    //     &self,
+    //     title: String,
+    //     url: Option<String>,
+    //     text: Option<String>,
+    // ) -> Result<(), Box<dyn Error>> {
 
-        Ok(format!("{}={};", pair.0, pair.1))
-    }
+    //     let cookie_string = self.cookie()?;
+    //     let cookie: HeaderValue = cookie_string.parse()
+    //         .expect("Got a user cookie, but failed to parse it to a header");
 
-    pub fn submit(
-        &self,
-        title: String,
-        url: Option<String>,
-        text: Option<String>,
-    ) -> Result<(), Box<dyn Error>> {
+    //     let mut formdata = HashMap::new();
+    //     let fnid = self.get_fnid().await?;
+    //     formdata.insert("fnid", fnid);
+    //     formdata.insert("fnop", "submit-page".to_string());
+    //     formdata.insert("url", url.unwrap_or_else(|| "".to_string()));
+    //     formdata.insert("text", text.unwrap_or_else(|| "".to_string()));
+    //     log::debug!("submit post body = {:?}", formdata);
+    //     formdata.insert("title", title);
+    //     
+    //     let req = self.http_client
+    //         .post(URL_SUBMIT)
+    //         .header("Cookie", cookie)
+    //         .form(&formdata);
+    //     log::debug!("submit post request = {:?}", req);
+    //     let resp = req.send().await?;
+    //     log::debug!("submit post response = {:?}", resp);
+    //     
+    //     Ok(())
 
-        let cookie_string = self.cookie()?;
-        let cookie: HeaderValue = cookie_string.parse()
-            .expect("Got a user cookie, but failed to parse it to a header");
+    // }
+    // 
+    // async fn get_fnid(&self) -> Result<String, Box<dyn Error>> {
+    //     let cookie_string = self.cookie()?;
+    //     let cookie: HeaderValue = cookie_string.parse()
+    //         .expect("Got a user cookie, but failed to parse it to a header");
+    // 
+    //     let req = self.http_client
+    //         .get(URL_SUBMIT_FORM)
+    //         .header("Cookie", cookie);
+    //     log::debug!("submit form request = {:?}", req);
+    //     let resp = req.send().await?;
+    //     log::debug!("submit form response = {:?}", resp);
+    //     let body = resp.text().await?;
+    //     let dom = Html::parse_document(&body);
+    //     
+    //     // Underlying library doesn't implement std::error::Error on their
+    //     // Error structs, so I can't include it as the src error in my struct
+    //     let selector = match Selector::parse("input[name='fnid']") {
+    //         Err(_src) => {
+    //             return Err(Box::new(HnError::HtmlParsingError));
+    //         },
+    //         Ok(selector) => selector,
+    //     };
+    // 
+    //     let result: Vec<ElementRef> = dom.select(&selector).collect();
+    //     let el = match result.get(0) {
+    //         Some(el) => el,
+    //         None => {
+    //             return Err(Box::new(HnError::HtmlParsingError));
+    //         }
+    //     };
+    //     let fnid = extract_fnid(el)?;
+    // 
+    //     Ok(fnid)
+    // }
 
-        let mut formdata = HashMap::new();
-        formdata.insert("fnid", self.get_fnid()?);
-        formdata.insert("fnop", "submit-page".to_string());
-        formdata.insert("url", url.unwrap_or_else(|| "".to_string()));
-        formdata.insert("text", text.unwrap_or_else(|| "".to_string()));
-        log::debug!("submit post body = {:?}", formdata);
-        formdata.insert("title", title);
-        
-        let req = self.http_client.post(URL_SUBMIT)
-            .header("Cookie", cookie)
-            .form(&formdata);
-        log::debug!("submit post request = {:?}", req);
-        let resp = req.send()?;
-        log::debug!("submit post response = {:?}", resp);
-        
-        Ok(())
+    // pub async fn login(&self, username: &str, password: &str) -> Result<(), Box<dyn Error>> {
+    //     let mut formdata = HashMap::new();
+    //     formdata.insert("acct", username);
+    //     formdata.insert("pw", password);
+    //     let goto = "newest".to_string();
+    //     formdata.insert("goto", &goto);
 
-    }
+    //     let mut headers = HeaderMap::new();
+    //     headers.insert("User-Agent", "hacker-news client/0.0.1".parse().unwrap());
+
+    //     // Login request requires no redirect on response, therefore we build a 
+    //     // new one rather than referencing self.http_client.
+    //     // TODO: Is there a better way to accomodate this?
+    //     let client = ClientBuilder::new()
+    //         .redirect(Policy::none())
+    //         .build()?;
+
+    //     // Send login request
+    //     let req = client.post(URL_LOGIN)
+    //         .headers(headers)
+    //         .form(&formdata);
+    //     log::debug!("login request = {:?}", req);
+    //     let resp = req.send().await?;
+    //     if resp.status().as_u16() != 302 {
+    //         log::error!("login response = {:?}", resp);
+    //         return Err(Box::new(HnError::AuthenticationError));
+    //     }
+    //     log::debug!("login response = {:?}", resp);
+
+    //     // Store user session cookie
+    //     let cookies: Vec<Cookie> = resp.cookies().collect();
+    //     let cookie = cookies.get(0)
+    //         // .ok_or("Unable to retrieve user cookie")?;
+    //         .ok_or_else(|| {
+    //             log::error!("Unable to parse user cookie from succesful login response, \
+    //                 response = {:?}, cookies = {:?}", resp, cookies);
+    //             HnError::HtmlParsingError
+    //         })?;
+    //     let cookie = Some((cookie.name().to_string(), cookie.value().to_string()));
+
+    //     // Store on client instance field
+    //     *self.cookie.borrow_mut() = cookie;
+    //     println!("cookie = {:?}", self.cookie);
+
+    //     Ok(())
+    // }
     
-    fn get_fnid(&self) -> Result<String, Box<dyn Error>> {
-        let cookie_string = self.cookie()?;
-        let cookie: HeaderValue = cookie_string.parse()
-            .expect("Got a user cookie, but failed to parse it to a header");
-    
-        let req = self.http_client
-            .get(URL_SUBMIT_FORM)
-            .header("Cookie", cookie);
-        log::debug!("submit form request = {:?}", req);
-        let resp = req.send()?;
-        log::debug!("submit form response = {:?}", resp);
-        let body = resp.text()?;
-        let dom = Html::parse_document(&body);
-        
-        // Underlying library doesn't implement std::error::Error on their
-        // Error structs, so I can't include it as the src error in my struct
-        let selector = match Selector::parse("input[name='fnid']") {
-            Err(_src) => {
-                return Err(Box::new(HnError::HtmlParsingError));
-            },
-            Ok(selector) => selector,
-        };
-    
-        let result: Vec<ElementRef> = dom.select(&selector).collect();
-        let el = match result.get(0) {
-            Some(el) => el,
-            None => {
-                return Err(Box::new(HnError::HtmlParsingError));
-            }
-        };
-        let fnid = extract_fnid(el)?;
-    
-        Ok(fnid)
-    }
-
-    pub fn login(&self, username: &str, password: &str) -> Result<(), Box<dyn Error>> {
-        let mut formdata = HashMap::new();
-        formdata.insert("acct", username);
-        formdata.insert("pw", password);
-        let goto = "newest".to_string();
-        formdata.insert("goto", &goto);
-
-        let mut headers = HeaderMap::new();
-        headers.insert("User-Agent", "hacker-news client/0.0.1".parse().unwrap());
-
-        // Login request requires no redirect on response, therefore we build a 
-        // new one rather than referencing self.http_client.
-        // TODO: Is there a better way to accomodate this?
-        let client = ClientBuilder::new()
-            .redirect(Policy::none())
-            .build()?;
-
-        // Send login request
-        let req = client.post(URL_LOGIN)
-            .headers(headers)
-            .form(&formdata);
-        log::debug!("login request = {:?}", req);
-        let resp = req.send()?;
-        if resp.status().as_u16() != 302 {
-            log::error!("login response = {:?}", resp);
-            return Err(Box::new(HnError::AuthenticationError));
-        }
-        log::debug!("login response = {:?}", resp);
-
-        // Store user session cookie
-        let cookies: Vec<Cookie> = resp.cookies().collect();
-        let cookie = cookies.get(0)
-            // .ok_or("Unable to retrieve user cookie")?;
-            .ok_or_else(|| {
-                log::error!("Unable to parse user cookie from succesful login response, \
-                    response = {:?}, cookies = {:?}", resp, cookies);
-                HnError::HtmlParsingError
-            })?;
-        let cookie = Some((cookie.name().to_string(), cookie.value().to_string()));
-
-        // Store on client instance field
-        *self.cookie.borrow_mut() = cookie;
-        println!("cookie = {:?}", self.cookie);
-
-        Ok(())
-    }
-    
-    pub fn item(&self, id: Id) -> Result<Listing, Box<dyn Error>> {
+    pub async fn item(&self, id: Id) -> Result<Listing, Box<dyn Error>> {
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
         log::debug!("Send GET request to {:?}", url);
-        let resp = req.send()?;
+        let resp = req.send().await?;
         let status = resp.status().as_u16();
         if status != 200 {
             let err = HttpError {
@@ -185,7 +187,7 @@ impl Client {
         }
         log::debug!("Received 200 response from {:?}", url);
 
-        let text = resp.text()?;
+        let text = resp.text().await?;
         let html = Html::parse_document(&text);
 
         // Note: There is an assumption here that given an item ID, we should
@@ -199,12 +201,13 @@ impl Client {
         Ok(item)
     }
 
-    pub fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
+    pub async fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
         log::debug!("HTML client attempting comments for id = {:?}", id);
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        let text = resp.text()?;
+        let resp = req.send().await?;
+        let text = resp.text().await?;
+
         let html = Html::parse_document(&text);
         let comments = CommentsParser::parse(&html)?;
         let comments = create_comment_tree(comments);
@@ -223,15 +226,15 @@ impl Client {
         Ok(thread)
     }
 
-    pub fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
-        self.listings("https://news.ycombinator.com/news")
+    pub async fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
+        self.listings("https://news.ycombinator.com/news").await
     }
 
-    pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub async fn past(&self, date: Date) -> Result<Vec<Listing>, Box<dyn Error>> {
         let url = format!("https://news.ycombinator.com/front?day={}-{}-{}",
             date.0, date.1, date.2);
 
-        self.listings(&url)
+        self.listings(&url).await
     }
 
     /// Retrieve a page of HackerNews Listings, such as that delivered from:
@@ -242,10 +245,10 @@ impl Client {
     /// * `https://news.ycombinator.com/ask`
     /// * `https://news.ycombinator.com/show`
     /// * `https://news.ycombinator.com/jobs`
-    pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub async fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
         let req = self.http_client.get(url);
-        let resp = req.send()?;
-        let text = resp.text()?;
+        let resp = req.send().await?;
+        let text = resp.text().await?;
         let html = Html::parse_document(&text);
         let listings = ListingsParser::parse(&html)?;
 
@@ -265,7 +268,7 @@ mod tests {
     fn test_news() -> Result<(), Box<dyn Error>> {
         setup();
         let client = Client::new();
-        let listings = client.news()?;
+        let listings = client.news().await?;
         log::info!("Successfully called Client::news()");
         log::trace!("Listings output from Client::news() = {:?}", listings);
 
