@@ -7,6 +7,7 @@ use crate::cli::login::Login;
 use crate::cli::query::Query;
 use crate::cli::news::News;
 use crate::cli::thread::Thread;
+use crate::cli::browse::Browse;
 
 /// Top level parser/cmd for the cli
 pub struct HackerNews;
@@ -21,6 +22,7 @@ impl HnCommand for HackerNews {
             .subcommand(News::parser())
             .subcommand(Login::parser())
             .subcommand(Thread::parser())
+            .subcommand(Browse::parser())
     }
 
     fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
@@ -30,6 +32,7 @@ impl HnCommand for HackerNews {
             (News::NAME, Some(matches)) => News::cmd(matches),
             (Login::NAME, Some(matches)) => Login::cmd(matches),
             (Thread::NAME, Some(matches)) => Thread::cmd(matches),
+            (Browse::NAME, Some(matches)) => Browse::cmd(matches),
             // Lack of a subcommand defaults to listing the current HN front page
             _ => News::cmd(matches),
         }
