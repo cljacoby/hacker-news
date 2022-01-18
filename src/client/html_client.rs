@@ -244,8 +244,10 @@ impl Client {
     /// * `https://news.ycombinator.com/jobs`
     pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
         let req = self.http_client.get(url);
-        let resp = req.send()?;
-        let text = resp.text()?;
+        let resp = req.send()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+        let text = resp.text()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
         let listings = ListingsParser::parse(&html)?;
 

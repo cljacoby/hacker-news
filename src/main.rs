@@ -3,6 +3,7 @@ use std::error::Error;
 use hacker_news::cli::HnCommand;
 use hacker_news::cli::hacker_news::HackerNews;
 use hacker_news::util::init_logger;
+use hacker_news::error::HnError;
 
 fn main() -> Result<(), Box<dyn Error>> {
     init_logger();
@@ -13,8 +14,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match HackerNews::cmd(&matches) {
         Ok(_) => std::process::exit(0),
-        Err(e) => {
-            println!("{}", e);
+        Err(err) => {
+            match err.downcast_ref::<HnError>() {
+                Some(hn_err) => hn_err.print(),
+                None => eprintln!("{}", err),
+            }
             std::process::exit(1);
         }
     }

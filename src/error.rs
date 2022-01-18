@@ -19,6 +19,9 @@ pub enum HnError {
     AuthenticationError,
     // Error raised from a failure during an HTTP request/response 
     HttpError(HttpError),
+    // Network Error
+    // NetworkError(String),
+    NetworkError(Option<Box<dyn Error>>),
 }
 
 impl Display for HnError {
@@ -38,8 +41,24 @@ impl Display for HnError {
                     http_err.url,
                     http_err.code,
                 )
+            },
+            // HnError::NetworkError(msg) => {
+            //     write!(f, "Network Error: {}", msg)
+            // }
+            HnError::NetworkError(source) => {
+                match source {
+                    Some(source) => write!(f, "Network Error: {}", source.to_string()),
+                    None => write!(f, "Network Error."),
+                }
             }
         }
+    }
+}
+
+
+impl HnError {
+    pub fn print(&self) {
+        eprintln!("Hacker News Error:\n{}", self);
     }
 }
 
