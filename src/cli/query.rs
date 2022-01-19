@@ -3,9 +3,11 @@ use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
+
 use crate::client::html_client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
+use crate::error::HnError;
 
 pub struct Query;
 
@@ -22,12 +24,12 @@ impl HnCommand for Query {
         )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-        let id = match matches.value_of("id") {
-            None => unreachable!("clap will require an argument value"),
-            Some(id) => id,
-        };
-        let id: Id = id.parse()?;
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>> {
+        // SAFE: The clap App will guarantee required arguments are received
+        let id = matches.value_of("id")
+            .unwrap();
+        let id: Id = id.parse()
+            .map_err(|_| HnError::ArgumentError(Some("id argument not parseable as numeric")))?;
 
         let client = Client::new();
         let item = client.item(id)?;

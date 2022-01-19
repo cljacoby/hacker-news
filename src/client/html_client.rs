@@ -189,8 +189,8 @@ impl Client {
         let html = Html::parse_document(&text);
 
         // Note: There is an assumption here that given an item ID, we should
-        // only extract one listing from a page. Therefore, we can simply pop once
-        // from the Vec obtained by extract listings.
+        // only receive one listing per page. Therefore, we can simply pop once
+        // from the Vec of extracted listings.
 
         let item = ListingsParser::parse(&html)?
             .pop()
@@ -223,11 +223,11 @@ impl Client {
         Ok(thread)
     }
 
-    pub fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub fn news(&self) -> Result<Vec<Listing>, Box<HnError>> {
         self.listings("https://news.ycombinator.com/news")
     }
 
-    pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<HnError>> {
         let url = format!("https://news.ycombinator.com/front?day={}-{}-{}",
             date.0, date.1, date.2);
 
@@ -242,14 +242,17 @@ impl Client {
     /// * `https://news.ycombinator.com/ask`
     /// * `https://news.ycombinator.com/show`
     /// * `https://news.ycombinator.com/jobs`
-    pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<HnError>> {
         let req = self.http_client.get(url);
         let resp = req.send()
-            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+            .map_err(|src| Box::new(HnError::NetworkError(Some(Box::new(src)))))?;
         let text = resp.text()
-            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+            .map_err(|src| Box::new(HnError::NetworkError(Some(Box::new(src)))))?;
         let html = Html::parse_document(&text);
-        let listings = ListingsParser::parse(&html)?;
+        // TODO: Should the originating of the HtmlParsingError happend within the parse logic,
+        // and isntead be bubbled up to this level?
+        let listings = ListingsParser::parse(&html)
+            .map_err(|src| Box::new(HnError::HtmlParsingError))?;
 
         Ok(listings)
     }

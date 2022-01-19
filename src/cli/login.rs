@@ -4,7 +4,9 @@ use clap::App;
 use clap::SubCommand;
 use clap::Arg;
 use clap::ArgMatches;
+
 use crate::cli::HnCommand;
+use crate::error::HnError;
 
 /// Login with a given username and password
 
@@ -33,16 +35,17 @@ impl HnCommand for Login {
             )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>> {
         let username = matches
             .value_of("username")
-            .ok_or("username is required for login")?;
+            .ok_or(Box::new(HnError::ArgumentError(Some("username not received"))))?;
         let password = matches
             .value_of("password")
-            .ok_or("password is required for login")?;
+            .ok_or(Box::new(HnError::ArgumentError(Some("password not received"))))?;
         
         let client = Client::new();
-        client.login(username, password)?;
+        client.login(username, password)
+            .map_err(|src| HnError::AuthenticationError)?;
 
         Ok(())
     }

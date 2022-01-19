@@ -19,9 +19,10 @@ pub enum HnError {
     AuthenticationError,
     // Error raised from a failure during an HTTP request/response 
     HttpError(HttpError),
-    // Network Error
-    // NetworkError(String),
+    // Error raised from Network connectivity problems
     NetworkError(Option<Box<dyn Error>>),
+    // Error from incorrect Argument configuration from the user
+    ArgumentError(Option<&'static str>),
 }
 
 impl Display for HnError {
@@ -42,13 +43,16 @@ impl Display for HnError {
                     http_err.code,
                 )
             },
-            // HnError::NetworkError(msg) => {
-            //     write!(f, "Network Error: {}", msg)
-            // }
             HnError::NetworkError(source) => {
                 match source {
                     Some(source) => write!(f, "Network Error: {}", source.to_string()),
                     None => write!(f, "Network Error."),
+                }
+            },
+            HnError::ArgumentError(msg) => {
+                match msg {
+                    Some(msg) => write!(f, "argument error: {}.", msg),
+                    None => write!(f, "Incorrect Argument Configuration."),
                 }
             }
         }
