@@ -8,6 +8,12 @@ pub struct HttpError {
     pub url: String,
 }
 
+impl HttpError {
+    pub fn new(code: u16, url: String) -> Self {
+        Self { code, url }
+    }
+}
+
 #[derive(Debug)]
 pub enum HnError {
     // Error used when parsing of an HTML document fails

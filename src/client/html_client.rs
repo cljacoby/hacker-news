@@ -176,12 +176,9 @@ impl Client {
         let resp = req.send()?;
         let status = resp.status().as_u16();
         if status != 200 {
-            let err = HttpError {
-                url: resp.url().to_string(),
-                code: status,
-            };
-            log::error!("Received non-200 response: {:?}", err);
-            return Err(Box::new(HnError::HttpError(err)));
+            let http_err = HttpError::new(status, resp.url().to_string());
+            log::error!("Received not 200 response: {:?}, thread id: {:?}", http_err, id);
+            return Err(Box::new(HnError::HttpError(http_err)));
         }
         log::debug!("Received 200 response from {:?}", url);
 
@@ -203,12 +200,16 @@ impl Client {
         log::debug!("HTML client attempting comments for id = {:?}", id);
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        let text = resp.text()?;
+        let resp = req.send()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+        let text = resp.text()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
-        let comments = CommentsParser::parse(&html)?;
+        let comments = CommentsParser::parse(&html)
+            .map_err(|src| HnError::HtmlParsingError)?;
         let comments = create_comment_tree(comments);
-        let listings = ListingsParser::parse(&html)?;
+        let listings = ListingsParser::parse(&html)
+            .map_err(|src| HnError::HtmlParsingError)?;
         if listings.len() > 1 {
             log::warn!("Parsed multiple listings for a thread, where only 1 is expected");
         }

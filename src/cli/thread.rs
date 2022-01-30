@@ -7,6 +7,7 @@ use clap::SubCommand;
 use crate::client::html_client::Client;
 use crate::model::Id;
 use crate::cli::HnCommand;
+use crate::error::HnError;
 
 pub struct Thread;
 
@@ -23,12 +24,13 @@ impl HnCommand for Thread {
         )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>> {
         let id = match matches.value_of("id") {
             None => unreachable!("clap will require an argument value"),
             Some(id) => id,
         };
-        let id: Id = id.parse()?;
+        let id: Id = id.parse()
+            .map_err(|_| HnError::ArgumentError(Some("thread id not parseable as u32")))?;
 
         let client = Client::new();
         let thread = client.thread(id)?;
