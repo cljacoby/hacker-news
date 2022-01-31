@@ -1,4 +1,3 @@
-use std::error::Error;
 use crate::client::html_client::Client;
 use clap::App;
 use clap::SubCommand;
@@ -45,7 +44,7 @@ impl HnCommand for Login {
         
         let client = Client::new();
         client.login(username, password)
-            .map_err(|src| HnError::AuthenticationError)?;
+            .map_err(|_src| HnError::AuthenticationError)?;
 
         Ok(())
     }

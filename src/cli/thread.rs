@@ -1,4 +1,3 @@
-use std::error::Error;
 use serde_json;
 use clap::App;
 use clap::Arg;
@@ -34,7 +33,10 @@ impl HnCommand for Thread {
 
         let client = Client::new();
         let thread = client.thread(id)?;
-        let json = serde_json::to_string(&thread)?;
+        let json = serde_json::to_string(&thread)
+            .map_err(|_src| HnError::SerializationError(
+                Some("Failed to serialize thread using serde derived implementations")
+        ))?;
         println!("{}", json);
 
         Ok(())

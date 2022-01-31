@@ -14,6 +14,10 @@ impl HttpError {
     }
 }
 
+// TODO: For variants with context messages (i.e. ArugmentError) consider referencing Anyhow's
+// method of generics with trait boundaries rather than just &'static str.
+// See anyhow::Error::context()
+
 #[derive(Debug)]
 pub enum HnError {
     // Error used when parsing of an HTML document fails
@@ -29,6 +33,8 @@ pub enum HnError {
     NetworkError(Option<Box<dyn Error>>),
     // Error from incorrect Argument configuration from the user
     ArgumentError(Option<&'static str>),
+    // Error due to inability to Serialize or Deserialize data with respect to a type.
+    SerializationError(Option<&'static str>)
 }
 
 impl Display for HnError {
@@ -57,8 +63,14 @@ impl Display for HnError {
             },
             HnError::ArgumentError(msg) => {
                 match msg {
-                    Some(msg) => write!(f, "argument error: {}.", msg),
+                    Some(msg) => write!(f, "Argument Error: {}.", msg),
                     None => write!(f, "Incorrect Argument Configuration."),
+                }
+            }
+            HnError::SerializationError(msg) => {
+                match msg {
+                    Some(msg) => write!(f, "Serialization Error: {}.", msg),
+                    None => write!(f, "Serialization Error."),
                 }
             }
         }

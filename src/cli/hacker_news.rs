@@ -1,4 +1,3 @@
-use std::error::Error;
 use clap::App;
 use clap::ArgMatches;
 use crate::cli::HnCommand;
@@ -7,6 +6,7 @@ use crate::cli::login::Login;
 use crate::cli::query::Query;
 use crate::cli::news::News;
 use crate::cli::thread::Thread;
+use crate::error::HnError;
 
 /// Top level parser/cmd for the cli
 pub struct HackerNews;
@@ -23,7 +23,7 @@ impl HnCommand for HackerNews {
             .subcommand(Thread::parser())
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>> {
         match matches.subcommand() {
             (Query::NAME, Some(matches)) => Query::cmd(matches),
             (Tree::NAME, Some(matches)) => Tree::cmd(matches),

@@ -1,4 +1,3 @@
-use std::error::Error;
 use clap::App;
 use clap::Arg;
 use clap::ArgMatches;

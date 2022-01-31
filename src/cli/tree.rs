@@ -1,10 +1,10 @@
-use std::error::Error;
 use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
-use crate::model::Id;
+// use crate::model::Id;
 use crate::cli::HnCommand;
+use crate::error::HnError;
 
 pub struct Tree;
 
@@ -31,14 +31,11 @@ impl HnCommand for Tree {
             )
     }
 
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
-        // Parse command-line argument of HackerNews ID
-        let _id: Id = matches
-            .value_of("id")
-            .ok_or("Id is required for query")?
-            .parse()?;
-
-        
+    fn cmd(_matches: &ArgMatches) -> Result<(), Box<HnError>> {
+        // let _id: Id = matches
+        //     .value_of("id")
+        //     .ok_or("Id is required for query")?
+        //     .parse()?;
         // Instantiate client, and retrieve comment data
         // let mut replies: Vec<Comment> = vec![];
         // let client = HNClient::new();

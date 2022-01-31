@@ -14,7 +14,6 @@ use scraper;
 use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
-use crate::error::HttpError;
 use crate::error::HnError;
 use crate::parser::HtmlParse;
 use crate::parser::ListingsParser;
@@ -169,34 +168,39 @@ impl Client {
         Ok(())
     }
     
-    pub fn item(&self, id: Id) -> Result<Listing, Box<dyn Error>> {
+    pub fn item(&self, id: Id) -> Result<Listing, Box<HnError>> {
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
         log::debug!("Send GET request to {:?}", url);
-        let resp = req.send()?;
-        let status = resp.status().as_u16();
-        if status != 200 {
-            let http_err = HttpError::new(status, resp.url().to_string());
-            log::error!("Received not 200 response: {:?}, thread id: {:?}", http_err, id);
-            return Err(Box::new(HnError::HttpError(http_err)));
-        }
+        let resp = req.send()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+        // let status = resp.status().as_u16();
+        // if status != 200 {
+        //     let http_err = HttpError::new(status, resp.url().to_string());
+        //     log::error!("Received not 200 response: {:?}, thread id: {:?}", http_err, id);
+        //     return Err(Box::new(HnError::HttpError(http_err)));
+        // }
         log::debug!("Received 200 response from {:?}", url);
 
-        let text = resp.text()?;
+        let text = resp.text()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
 
         // Note: There is an assumption here that given an item ID, we should
         // only receive one listing per page. Therefore, we can simply pop once
         // from the Vec of extracted listings.
-
-        let item = ListingsParser::parse(&html)?
+        
+        // TODO: Consider defined HnError::HtmlParsingError as
+        // HnError::HtmlParsingError(Option<&str>) so as to add a message
+        let item = ListingsParser::parse(&html)
+            .map_err(|_src| HnError::HtmlParsingError)?
             .pop()
-            .ok_or(format!("Did not find item {}", id))?;
+            .ok_or(HnError::HtmlParsingError)?;
 
         Ok(item)
     }
 
-    pub fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
+    pub fn thread(&self, id: Id) -> Result<Thread, Box<HnError>> {
         log::debug!("HTML client attempting comments for id = {:?}", id);
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
@@ -206,10 +210,10 @@ impl Client {
             .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
         let comments = CommentsParser::parse(&html)
-            .map_err(|src| HnError::HtmlParsingError)?;
+            .map_err(|_src| HnError::HtmlParsingError)?;
         let comments = create_comment_tree(comments);
         let listings = ListingsParser::parse(&html)
-            .map_err(|src| HnError::HtmlParsingError)?;
+            .map_err(|_src| HnError::HtmlParsingError)?;
         if listings.len() > 1 {
             log::warn!("Parsed multiple listings for a thread, where only 1 is expected");
         }
@@ -253,7 +257,7 @@ impl Client {
         // TODO: Should the originating of the HtmlParsingError happend within the parse logic,
         // and isntead be bubbled up to this level?
         let listings = ListingsParser::parse(&html)
-            .map_err(|src| Box::new(HnError::HtmlParsingError))?;
+            .map_err(|_src| Box::new(HnError::HtmlParsingError))?;
 
         Ok(listings)
     }
