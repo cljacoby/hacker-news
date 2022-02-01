@@ -47,10 +47,10 @@ impl Display for HnError {
                 write!(f, "UnauthenticatedError: An unauthenticated client attempted an action requiring authorization.")
             }
             HnError::AuthenticationError => {
-                write!(f, "A client failed to authenticate. Please check credential information, and authentication frequency")
+                write!(f, "AuthenticationError: A client failed to authenticate.")
             }
             HnError::HttpError(http_err) => {
-                write!(f, "A client failed during an HTTP request/response; url '{}', code '{}'",
+                write!(f, "HttpError: Unsuccesful HTTP response code, url '{}', code '{}'",
                     http_err.url,
                     http_err.code,
                 )

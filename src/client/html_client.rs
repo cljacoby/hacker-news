@@ -5,6 +5,8 @@ use std::cell::RefCell;
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest;
+// use reqwest::Response;
+use reqwest::blocking::Response;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::HeaderValue;
 use reqwest::header::HeaderMap;
@@ -15,6 +17,7 @@ use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
 use crate::error::HnError;
+use crate::error::HttpError;
 use crate::parser::HtmlParse;
 use crate::parser::ListingsParser;
 use crate::parser::CommentsParser;
@@ -37,6 +40,20 @@ lazy_static! {
 pub struct Client {
     http_client: reqwest::blocking::Client,
     cookie: RefCell<Option<(String, String)>>,
+}
+
+/// Assess if an Http request was succesful, preparing an HttpError response
+/// object if it was not.
+fn http_error(resp: &Response) -> Option<HttpError> {
+    let status = resp.status().as_u16();
+    if status == 200 {
+        None
+    } else {
+        Some(HttpError {
+            url: resp.url().to_string(),
+            code: status
+        })
+    }
 }
 
 impl Client {
@@ -174,12 +191,9 @@ impl Client {
         log::debug!("Send GET request to {:?}", url);
         let resp = req.send()
             .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
-        // let status = resp.status().as_u16();
-        // if status != 200 {
-        //     let http_err = HttpError::new(status, resp.url().to_string());
-        //     log::error!("Received not 200 response: {:?}, thread id: {:?}", http_err, id);
-        //     return Err(Box::new(HnError::HttpError(http_err)));
-        // }
+        if let Some(http_err) = http_error(&resp) {
+            return Err(Box::new(HnError::HttpError(http_err)));
+        }
         log::debug!("Received 200 response from {:?}", url);
 
         let text = resp.text()
@@ -199,13 +213,20 @@ impl Client {
 
         Ok(item)
     }
-
+    
     pub fn thread(&self, id: Id) -> Result<Thread, Box<HnError>> {
-        log::debug!("HTML client attempting comments for id = {:?}", id);
-        let url = format!("https://news.ycombinator.com/item?id={}", id);
-        let req = self.http_client.get(&url);
-        let resp = req.send()
+        // let url = format!("https://news.ycombinator.com/item?id={}", id);
+        let url = format!("https://news.ycombinator.com/sf");
+        log::debug!("Html client prepare request, id = {:?}, url= {:?}", id, url);
+        
+        let resp = self.http_client.get(&url)
+            .send()
             .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+        if let Some(http_err) = http_error(&resp) {
+            return Err(Box::new(HnError::HttpError(http_err)));
+        }
+        log::debug!("Html client successful HTTP response, id = {:?}, url= {:?}", id, url);
+
         let text = resp.text()
             .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
@@ -224,6 +245,7 @@ impl Client {
                 HnError::HtmlParsingError
             })?;
         let thread = Thread { listing, comments };
+        log::debug!("Html client successfully parsed HTML comment thread, id = {:?}, url= {:?}", id, url);
         
         Ok(thread)
     }

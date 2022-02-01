@@ -25,15 +25,38 @@ impl HnCommand for HackerNews {
 
     fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>> {
         match matches.subcommand() {
-            (Query::NAME, Some(matches)) => Query::cmd(matches),
-            (Tree::NAME, Some(matches)) => Tree::cmd(matches),
-            (News::NAME, Some(matches)) => News::cmd(matches),
-            (Login::NAME, Some(matches)) => Login::cmd(matches),
-            (Thread::NAME, Some(matches)) => Thread::cmd(matches),
+            (Query::NAME, Some(matches)) => Query::cmd(matches).map_err(|e|
+                {
+                    log::error!("{:?} failed", Query::NAME);
+                    e
+                }),
+            (Tree::NAME, Some(matches)) => {
+                Tree::cmd(matches).map_err(|e| {
+                    log::error!("{:?} failed", Tree::NAME);
+                    e
+                })},
+            (News::NAME, Some(matches)) => {
+                News::cmd(matches).map_err(|e| {
+                    log::error!("{:?} failed", News::NAME);
+                    e
+            })},
+            (Login::NAME, Some(matches)) => {
+                Login::cmd(matches).map_err(|e| {
+                    log::error!("{:?} failed", Login::NAME);
+                e
+            })},
+            (Thread::NAME, Some(matches)) => {
+                Thread::cmd(matches).map_err(|e| {
+                    log::error!("{:?} failed", Thread::NAME);
+                e
+            })},
             // Lack of a subcommand defaults to listing the current HN front page
-            _ => News::cmd(matches),
+            _ => {
+                News::cmd(matches).map_err(|e| {
+                    log::error!("{:?} failed", News::NAME);
+                    e
+                })},
         }
     }
-
 }
 
