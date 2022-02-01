@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // TODO: Implement nice error printing on HnError
     if let Err(err) = HackerNews::cmd(&matches) {
-        eprintln!("{}", err);
+        err.formatted_print();
         std::process::exit(1);
     }
 

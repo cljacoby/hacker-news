@@ -24,7 +24,7 @@ impl HnCommand for Thread {
     }
 
     fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>> {
-        log::debug!("Begin `hackernews thread` command");
+        log::debug!("Begin hackernews subcommand command");
 
         let id = match matches.value_of("id") {
             None => unreachable!("clap will require an argument value"),

@@ -216,7 +216,7 @@ impl Client {
     
     pub fn thread(&self, id: Id) -> Result<Thread, Box<HnError>> {
         // let url = format!("https://news.ycombinator.com/item?id={}", id);
-        let url = format!("https://news.ycombinator.com/sf");
+        let url = format!("https://news.ycombinator.com/sdfdsf?id={}", id);
         log::debug!("Html client prepare request, id = {:?}, url= {:?}", id, url);
         
         let resp = self.http_client.get(&url)

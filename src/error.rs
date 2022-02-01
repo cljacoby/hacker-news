@@ -41,35 +41,35 @@ impl Display for HnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HnError::HtmlParsingError => {
-                write!(f, "HtmlParsingErr: There was a problem parsing HTML data. This is an internal library error.")
+                write!(f, "(HtmlParsingErr) There was a problem parsing HTML data. This is an internal library error.")
             },
             HnError::UnauthenticatedError => {
-                write!(f, "UnauthenticatedError: An unauthenticated client attempted an action requiring authorization.")
+                write!(f, "(UnauthenticatedError) An unauthenticated client attempted an action requiring authorization.")
             }
             HnError::AuthenticationError => {
-                write!(f, "AuthenticationError: A client failed to authenticate.")
+                write!(f, "(AuthenticationError) A client failed to authenticate.")
             }
             HnError::HttpError(http_err) => {
-                write!(f, "HttpError: Unsuccesful HTTP response code, url '{}', code '{}'",
+                write!(f, "(HttpError) Unsuccesful HTTP response code, url '{}', code '{}'",
                     http_err.url,
                     http_err.code,
                 )
             },
             HnError::NetworkError(source) => {
                 match source {
-                    Some(source) => write!(f, "Network Error: {}", source.to_string()),
+                    Some(source) => write!(f, "(Network Error) {}", source.to_string()),
                     None => write!(f, "Network Error."),
                 }
             },
             HnError::ArgumentError(msg) => {
                 match msg {
-                    Some(msg) => write!(f, "Argument Error: {}.", msg),
+                    Some(msg) => write!(f, "(Argument Error) {}.", msg),
                     None => write!(f, "Incorrect Argument Configuration."),
                 }
             }
             HnError::SerializationError(msg) => {
                 match msg {
-                    Some(msg) => write!(f, "Serialization Error: {}.", msg),
+                    Some(msg) => write!(f, "(Serialization Error) {}.", msg),
                     None => write!(f, "Serialization Error."),
                 }
             }
@@ -79,8 +79,8 @@ impl Display for HnError {
 
 
 impl HnError {
-    pub fn print(&self) {
-        eprintln!("Hacker News Error:\n{}", self);
+    pub fn formatted_print(&self) {
+        eprintln!("error:\n\t{}", self);
     }
 }
 
