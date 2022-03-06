@@ -1,6 +1,12 @@
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt;
+use std::io::Write;
+use termcolor::BufferWriter;
+use termcolor::ColorChoice;
+use termcolor::ColorSpec;
+use termcolor::Color;
+use termcolor::WriteColor;
 
 #[derive(Debug)]
 pub struct HttpError {
@@ -41,46 +47,117 @@ impl Display for HnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HnError::HtmlParsingError => {
-                write!(f, "(HtmlParsingErr) There was a problem parsing HTML data. This is an internal library error.")
+                write!(f, "There was a problem parsing HTML data. This is an internal library error.")
             },
             HnError::UnauthenticatedError => {
-                write!(f, "(UnauthenticatedError) An unauthenticated client attempted an action requiring authorization.")
+                write!(f, "An unauthenticated client attempted an action requiring authorization.")
             }
             HnError::AuthenticationError => {
-                write!(f, "(AuthenticationError) A client failed to authenticate.")
+                write!(f, "A Hacker News client failed to authenticate.")
             }
             HnError::HttpError(http_err) => {
-                write!(f, "(HttpError) Unsuccesful HTTP response code, url '{}', code '{}'",
+                write!(f, "Unsuccesful HTTP response code, url '{}', code '{}'",
                     http_err.url,
                     http_err.code,
                 )
             },
-            HnError::NetworkError(source) => {
-                match source {
-                    Some(source) => write!(f, "(Network Error) {}", source.to_string()),
-                    None => write!(f, "Network Error."),
-                }
+            HnError::NetworkError(_source) => {
+                write!(f, "Failed to make network request")
+                // match source {
+                //     Some(source) => write!(f, "(Network Error) {}", source.to_string()),
+                //     None => write!(f, "Network Error."),
+                // }
             },
-            HnError::ArgumentError(msg) => {
-                match msg {
-                    Some(msg) => write!(f, "(Argument Error) {}.", msg),
-                    None => write!(f, "Incorrect Argument Configuration."),
-                }
+            HnError::ArgumentError(_msg) => {
+                write!(f, "Incorrect argument configuration")
+                // match msg {
+                //     Some(msg) => write!(f, "(Argument Error) {}.", msg),
+                //     None => write!(f, "Incorrect Argument Configuration."),
+                // }
             }
-            HnError::SerializationError(msg) => {
-                match msg {
-                    Some(msg) => write!(f, "(Serialization Error) {}.", msg),
-                    None => write!(f, "Serialization Error."),
-                }
+            HnError::SerializationError(_msg) => {
+                write!(f, "Failed to serialize/deseralize data structure")
+                // match msg {
+                //     Some(msg) => write!(f, "(Serialization Error) {}.", msg),
+                //     None => write!(f, "Serialization Error."),
+                // }
             }
         }
     }
 }
 
+struct Colorizer {
+    // use_stderr: bool,
+    // use_color: bool,
+    // pieces: Vec<String, Style>
+    pieces: Vec<(String, Style)>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Style {
+    Good,
+    Warning,
+    Error,
+    Hint,
+    Default,
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+impl Colorizer {
+    pub fn print(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let writer = BufferWriter::stdout(ColorChoice::Always);
+        let mut buffer = writer.buffer();
+
+        for piece in self.pieces.iter() {
+            let mut color = ColorSpec::new();
+            match piece.1 {
+                Style::Good => {
+                    color.set_fg(Some(Color::Green));
+                },
+                Style::Warning => {
+                    color.set_fg(Some(Color::Yellow));
+                },
+                Style::Error => {
+                    color.set_fg(Some(Color::Red));
+                    color.set_bold(true);
+                },
+                Style::Hint => {
+                    color.set_dimmed(true);
+                },
+                Style::Default => {}
+            }
+
+            buffer.set_color(&color)?;
+            buffer.write_all(piece.0.as_bytes())?;
+            buffer.reset()?;
+        }
+
+        writer.print(&buffer)?;
+
+        Ok(())
+    }
+}
 
 impl HnError {
     pub fn formatted_print(&self) {
-        eprintln!("error:\n\t{}", self);
+        // eprintln!("{}", self);
+        let mut colorizer = Colorizer {
+            // use_stderr: true,
+            // use_color: true,
+            pieces: vec![],
+        };
+
+        let source = self.source();
+
+        colorizer.pieces.push(("error:\n".to_string(), Style::Error));
+        colorizer.pieces.push((format!("{}\n", self), Style::Default));
+
+        colorizer.print().expect("colorizer print failed");
     }
 }
 
