@@ -1,6 +1,7 @@
-use std::error::Error;
 use clap::App;
 use clap::ArgMatches;
+
+use crate::error::HnError;
 
 pub(crate) mod login;
 pub(crate) mod news;
@@ -25,5 +26,6 @@ pub trait HnCommand {
     /// The command executed when this subcommand is actually run. This function receives a
     /// [clap](https://docs.rs/clap/2.33.3/clap/index.html) ArgMatches instance, which can
     /// drive optional or argument based logic.
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>>;
+    // fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>>;
+    fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>>;
 }

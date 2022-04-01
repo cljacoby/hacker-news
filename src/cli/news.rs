@@ -1,10 +1,11 @@
-use std::error::Error;
 use clap::App;
 use clap::ArgMatches;
 use clap::SubCommand;
 use grid_printer::GridPrinter;
 use crate::client::html_client::Client;
+
 use crate::cli::HnCommand;
+use crate::error::HnError;
 
 /// Get front page listings of Hacker News.
 pub struct News;
@@ -16,7 +17,7 @@ impl HnCommand for News {
         SubCommand::with_name(Self::NAME)
     }
 
-    fn cmd(_matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    fn cmd(_matches: &ArgMatches) -> Result<(), Box<HnError>> {
         let client = Client::new();
         let listings = client.news()?;
         let grid: Vec<Vec<String>> = listings.into_iter().map(|l| vec![

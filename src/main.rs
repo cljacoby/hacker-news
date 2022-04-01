@@ -3,6 +3,7 @@ use std::error::Error;
 use hacker_news::cli::HnCommand;
 use hacker_news::cli::hacker_news::HackerNews;
 use hacker_news::util::init_logger;
+// use hacker_news::error::HnError;
 
 fn main() -> Result<(), Box<dyn Error>> {
     init_logger();
@@ -11,11 +12,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let app = HackerNews::parser();
     let matches = app.get_matches_from(env::args_os());
 
-    match HackerNews::cmd(&matches) {
-        Ok(_) => std::process::exit(0),
-        Err(e) => {
-            println!("{}", e);
-            std::process::exit(1);
-        }
+    // TODO: Implement nice error printing on HnError
+    if let Err(err) = HackerNews::cmd(&matches) {
+        err.formatted_print();
+        std::process::exit(1);
     }
+
+    std::process::exit(0);
 }

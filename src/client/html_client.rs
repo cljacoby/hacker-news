@@ -5,6 +5,8 @@ use std::cell::RefCell;
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest;
+// use reqwest::Response;
+use reqwest::blocking::Response;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::HeaderValue;
 use reqwest::header::HeaderMap;
@@ -14,8 +16,8 @@ use scraper;
 use scraper::Html;
 use scraper::Selector;
 use scraper::ElementRef;
-use crate::error::HttpError;
 use crate::error::HnError;
+use crate::error::HttpError;
 use crate::parser::HtmlParse;
 use crate::parser::ListingsParser;
 use crate::parser::CommentsParser;
@@ -38,6 +40,20 @@ lazy_static! {
 pub struct Client {
     http_client: reqwest::blocking::Client,
     cookie: RefCell<Option<(String, String)>>,
+}
+
+/// Assess if an Http request was succesful, preparing an HttpError response
+/// object if it was not.
+fn http_error(resp: &Response) -> Option<HttpError> {
+    let status = resp.status().as_u16();
+    if status == 200 {
+        None
+    } else {
+        Some(HttpError {
+            url: resp.url().to_string(),
+            code: status
+        })
+    }
 }
 
 impl Client {
@@ -169,46 +185,55 @@ impl Client {
         Ok(())
     }
     
-    pub fn item(&self, id: Id) -> Result<Listing, Box<dyn Error>> {
+    pub fn item(&self, id: Id) -> Result<Listing, Box<HnError>> {
         let url = format!("https://news.ycombinator.com/item?id={}", id);
         let req = self.http_client.get(&url);
         log::debug!("Send GET request to {:?}", url);
-        let resp = req.send()?;
-        let status = resp.status().as_u16();
-        if status != 200 {
-            let err = HttpError {
-                url: resp.url().to_string(),
-                code: status,
-            };
-            log::error!("Received non-200 response: {:?}", err);
-            return Err(Box::new(HnError::HttpError(err)));
+        let resp = req.send()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+        if let Some(http_err) = http_error(&resp) {
+            return Err(Box::new(HnError::HttpError(http_err)));
         }
         log::debug!("Received 200 response from {:?}", url);
 
-        let text = resp.text()?;
+        let text = resp.text()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
 
         // Note: There is an assumption here that given an item ID, we should
-        // only extract one listing from a page. Therefore, we can simply pop once
-        // from the Vec obtained by extract listings.
-
-        let item = ListingsParser::parse(&html)?
+        // only receive one listing per page. Therefore, we can simply pop once
+        // from the Vec of extracted listings.
+        
+        // TODO: Consider defined HnError::HtmlParsingError as
+        // HnError::HtmlParsingError(Option<&str>) so as to add a message
+        let item = ListingsParser::parse(&html)
+            .map_err(|_src| HnError::HtmlParsingError)?
             .pop()
-            .ok_or(format!("Did not find item {}", id))?;
+            .ok_or(HnError::HtmlParsingError)?;
 
         Ok(item)
     }
-
-    pub fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
-        log::debug!("HTML client attempting comments for id = {:?}", id);
+    
+    pub fn thread(&self, id: Id) -> Result<Thread, Box<HnError>> {
         let url = format!("https://news.ycombinator.com/item?id={}", id);
-        let req = self.http_client.get(&url);
-        let resp = req.send()?;
-        let text = resp.text()?;
+        log::debug!("Html client prepare request, id = {:?}, url= {:?}", id, url);
+        
+        let resp = self.http_client.get(&url)
+            .send()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
+        if let Some(http_err) = http_error(&resp) {
+            return Err(Box::new(HnError::HttpError(http_err)));
+        }
+        log::debug!("Html client successful HTTP response, id = {:?}, url= {:?}", id, url);
+
+        let text = resp.text()
+            .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
-        let comments = CommentsParser::parse(&html)?;
+        let comments = CommentsParser::parse(&html)
+            .map_err(|_src| HnError::HtmlParsingError)?;
         let comments = create_comment_tree(comments);
-        let listings = ListingsParser::parse(&html)?;
+        let listings = ListingsParser::parse(&html)
+            .map_err(|_src| HnError::HtmlParsingError)?;
         if listings.len() > 1 {
             log::warn!("Parsed multiple listings for a thread, where only 1 is expected");
         }
@@ -219,15 +244,16 @@ impl Client {
                 HnError::HtmlParsingError
             })?;
         let thread = Thread { listing, comments };
+        log::debug!("Html client successfully parsed HTML comment thread, id = {:?}, url= {:?}", id, url);
         
         Ok(thread)
     }
 
-    pub fn news(&self) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub fn news(&self) -> Result<Vec<Listing>, Box<HnError>> {
         self.listings("https://news.ycombinator.com/news")
     }
 
-    pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub fn past(&self, date: Date) -> Result<Vec<Listing>, Box<HnError>> {
         let url = format!("https://news.ycombinator.com/front?day={}-{}-{}",
             date.0, date.1, date.2);
 
@@ -242,12 +268,17 @@ impl Client {
     /// * `https://news.ycombinator.com/ask`
     /// * `https://news.ycombinator.com/show`
     /// * `https://news.ycombinator.com/jobs`
-    pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<dyn Error>> {
+    pub fn listings(&self, url: &str) -> Result<Vec<Listing>, Box<HnError>> {
         let req = self.http_client.get(url);
-        let resp = req.send()?;
-        let text = resp.text()?;
+        let resp = req.send()
+            .map_err(|src| Box::new(HnError::NetworkError(Some(Box::new(src)))))?;
+        let text = resp.text()
+            .map_err(|src| Box::new(HnError::NetworkError(Some(Box::new(src)))))?;
         let html = Html::parse_document(&text);
-        let listings = ListingsParser::parse(&html)?;
+        // TODO: Should the originating of the HtmlParsingError happend within the parse logic,
+        // and isntead be bubbled up to this level?
+        let listings = ListingsParser::parse(&html)
+            .map_err(|_src| Box::new(HnError::HtmlParsingError))?;
 
         Ok(listings)
     }
