@@ -31,7 +31,7 @@ impl HnCommand for Thread {
             Some(id) => id,
         };
         let id: Id = id.parse()
-            .map_err(|_| HnError::ArgumentError(Some("thread id not parseable as u32")))?;
+            .map_err(|_| HnError::ArgumentError(Some("Thread id not parseable as u32")))?;
 
         let client = Client::new();
         let thread = client.thread(id)?;

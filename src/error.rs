@@ -20,10 +20,6 @@ impl HttpError {
     }
 }
 
-// TODO: For variants with context messages (i.e. ArugmentError) consider referencing Anyhow's
-// method of generics with trait boundaries rather than just &'static str.
-// See anyhow::Error::context()
-
 #[derive(Debug)]
 pub enum HnError {
     // Error used when parsing of an HTML document fails
@@ -50,7 +46,7 @@ impl Display for HnError {
                 write!(f, "There was a problem parsing HTML data. This is an internal library error.")
             },
             HnError::UnauthenticatedError => {
-                write!(f, "An unauthenticated client attempted an action requiring authorization.")
+                write!(f, "An unauthenticated client attempted an action requiring authentication.")
             }
             HnError::AuthenticationError => {
                 write!(f, "A Hacker News client failed to authenticate.")
@@ -61,27 +57,38 @@ impl Display for HnError {
                     http_err.code,
                 )
             },
-            HnError::NetworkError(_source) => {
-                write!(f, "Failed to make network request")
-                // match source {
-                //     Some(source) => write!(f, "(Network Error) {}", source.to_string()),
-                //     None => write!(f, "Network Error."),
-                // }
+            HnError::NetworkError(src) => {
+                match src {
+                    Some(src) => write!(f, "Failed to make network request. {}", src.to_string()),
+                    None => write!(f, "Failed to make network request."),
+                }
             },
-            HnError::ArgumentError(_msg) => {
-                write!(f, "Incorrect argument configuration")
-                // match msg {
-                //     Some(msg) => write!(f, "(Argument Error) {}.", msg),
-                //     None => write!(f, "Incorrect Argument Configuration."),
-                // }
+            HnError::ArgumentError(msg) => {
+                match msg {
+                    None => write!(f, "Incorrect argument configuration."),
+                    Some(msg) => write!(f, "Incorrect argument configuration. {}.", msg),
+                }
             }
-            HnError::SerializationError(_msg) => {
-                write!(f, "Failed to serialize/deseralize data structure")
-                // match msg {
-                //     Some(msg) => write!(f, "(Serialization Error) {}.", msg),
-                //     None => write!(f, "Serialization Error."),
-                // }
+            HnError::SerializationError(msg) => {
+                match msg {
+                    Some(msg) => write!(f, "Failed to serialize/deseralize data structure. {}.", msg),
+                    None => write!(f, "Failed to serialize/deseralize data structure."),
+                }
             }
+        }
+    }
+}
+
+impl HnError {
+    pub fn variant_str(&self) -> &'static str {
+        match self {
+            HnError::HtmlParsingError => "HtmlParsingError",
+            HnError::UnauthenticatedError => "UnauthenticatedError",
+            HnError::AuthenticationError => "AuthenticationError",
+            HnError::HttpError(_http_err) => "HttpError",
+            HnError::NetworkError(_source) => "NetworkErr",
+            HnError::ArgumentError(_msg) => "ArgumentError",
+            HnError::SerializationError(_msg) => "SerializationError",
         }
     }
 }
@@ -128,6 +135,7 @@ impl Colorizer {
                 },
                 Style::Hint => {
                     color.set_dimmed(true);
+                    color.set_italic(true);
                 },
                 Style::Default => {}
             }
@@ -145,19 +153,18 @@ impl Colorizer {
 
 impl HnError {
     pub fn formatted_print(&self) {
-        // eprintln!("{}", self);
         let mut colorizer = Colorizer {
-            // use_stderr: true,
-            // use_color: true,
             pieces: vec![],
         };
 
-        let source = self.source();
-
-        colorizer.pieces.push(("error:\n".to_string(), Style::Error));
+        colorizer.pieces.push(("error: ".to_string(), Style::Error));
         colorizer.pieces.push((format!("{}\n", self), Style::Default));
+        colorizer.pieces.push((format!("{}\n", self.variant_str()), Style::Hint));
 
-        colorizer.print().expect("colorizer print failed");
+        if let Err(_err) = colorizer.print() {
+            log::error!("Failed formatted color print of {}", self);
+            eprintln!("error: {}", self);
+        }
     }
 }
 
