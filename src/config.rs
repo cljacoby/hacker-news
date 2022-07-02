@@ -6,12 +6,12 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct HNConfig {
-    user: Option<HNConfigUser>
+    _user: Option<HNConfigUser>
 }
 
 #[derive(Debug, Deserialize)]
 struct HNConfigUser {
-    username: Option<String>,
+    _username: Option<String>,
 }
 
 impl HNConfig {
