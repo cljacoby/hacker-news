@@ -18,7 +18,7 @@ lazy_static! {
     static ref QS_LISTING: Selector = Selector::parse("tr.athing:not(.comtr)").unwrap();
     
     // Applied to listing node (i.e. node `tr.athing:not(.comtr)"`)
-    static ref QS_LISTING_TITLE: Selector = Selector::parse("td.title > a.titlelink").unwrap();
+    static ref QS_LISTING_TITLE: Selector = Selector::parse("td.title > span.titleline > a").unwrap();
 
     // Applied to listing subtext node
     static ref QS_LISTING_USER: Selector = Selector::parse("a.hnuser").unwrap();
@@ -44,7 +44,11 @@ impl HtmlParse for ListingsParser {
         for node in html.select(&QS_LISTING) {
             let id = Self::parse_id(&node)?;
             log::debug!("Attempting parse of listing for id = {:?}", id);
-            let text = Self::parse_text(&node, id)?;
+            let text = Self::parse_text(&node, id)
+                .map_err(|err| {
+                    log::error!("Failed to extract listing text. Error={:?}", err);
+                    HnError::HtmlParsingError
+                })?;
             log::debug!("text = {:?}", text);
             let subtext_node = Self::query_subtext_node(&node, id)?; 
             let title_node = Self::query_title_node(&node, id)?;
@@ -100,11 +104,6 @@ impl ListingsParser {
         let el = table.value();
 
         if el.has_class("itemlist", CaseSensitivity::AsciiCaseInsensitive) {
-            log::debug!("Classed listing as '.itemlist' for id = {:?}", id);
-            return Ok(None);
-        }
-
-        if el.has_class("fatitem", CaseSensitivity::AsciiCaseInsensitive) {
             log::debug!("Classed listing as '.fatitem' for id = {:?}", id);
             let tbody = table.select(&QS_TBODY)
                 .next()
