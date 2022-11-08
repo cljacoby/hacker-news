@@ -41,9 +41,9 @@ impl HtmlParse for ListingsParser {
     
     fn parse(html: &Html) -> Result<Self::Item, Box<dyn Error>> {
         let mut listings = Vec::new();
-        for node in html.select(&QS_LISTING) {
+        for (i, node) in html.select(&QS_LISTING).enumerate() {
             let id = Self::parse_id(&node)?;
-            log::debug!("Attempting parse of listing for id = {:?}", id);
+            log::debug!("Attempting parse of listing id={:?}, listing index={:?}.", id, i);
             let text = Self::parse_text(&node, id)
                 .map_err(|err| {
                     log::error!("Failed to extract listing text. Error={:?}", err);
@@ -103,7 +103,9 @@ impl ListingsParser {
         })?;
         let el = table.value();
 
-        if el.has_class("itemlist", CaseSensitivity::AsciiCaseInsensitive) {
+        if el.has_class("itemlist", CaseSensitivity::AsciiCaseInsensitive) 
+            || el.has_class("fatitem", CaseSensitivity::AsciiCaseInsensitive)
+        {
             log::debug!("Classed listing as '.fatitem' for id = {:?}", id);
             let tbody = table.select(&QS_TBODY)
                 .next()

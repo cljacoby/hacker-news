@@ -229,11 +229,18 @@ impl Client {
         let text = resp.text()
             .map_err(|src| HnError::NetworkError(Some(Box::new(src))))?;
         let html = Html::parse_document(&text);
-        let comments = CommentsParser::parse(&html)
-            .map_err(|_src| HnError::HtmlParsingError)?;
+
+        let comments = CommentsParser::parse(&html).map_err(|_src| {
+            log::error!("Failed to parse all comments for id={:?}", id);
+            HnError::HtmlParsingError
+        })?;
         let comments = create_comment_tree(comments);
-        let listings = ListingsParser::parse(&html)
-            .map_err(|_src| HnError::HtmlParsingError)?;
+        log::debug!("Successfully parse comments for thread id={:?}", id);
+
+        let listings = ListingsParser::parse(&html).map_err(|_src| {
+            log::error!("Failed to parse listing for id={:?}", id);
+            HnError::HtmlParsingError
+        })?;
         if listings.len() > 1 {
             log::warn!("Parsed multiple listings for a thread, where only 1 is expected");
         }
@@ -243,6 +250,8 @@ impl Client {
                 log::error!("Succesfully parsed HTML, but found no listings");
                 HnError::HtmlParsingError
             })?;
+
+
         let thread = Thread { listing, comments };
         log::debug!("Html client successfully parsed HTML comment thread, id = {:?}, url= {:?}", id, url);
         
