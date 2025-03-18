@@ -11,7 +11,8 @@ use crate::model::Id;
 use crate::model::firebase::User;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
-    
+
+#[derive(Debug)]
 pub struct JsonClient {
     http_client: reqwest::blocking::Client,
 }

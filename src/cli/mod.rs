@@ -3,11 +3,11 @@ use clap::ArgMatches;
 
 use crate::error::HnError;
 
-pub(crate) mod login;
+// pub(crate) mod login;
 pub(crate) mod news;
-pub(crate) mod query;
-pub(crate) mod thread;
-pub(crate) mod tree;
+// pub(crate) mod query;
+// pub(crate) mod thread;
+// pub(crate) mod tree;
 pub mod hacker_news;
 
 /// A trait defining the interface to add a subcommand to the command line
