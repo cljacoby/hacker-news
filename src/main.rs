@@ -3,9 +3,9 @@ use std::error::Error;
 use hacker_news::cli::HnCommand;
 use hacker_news::cli::hacker_news::HackerNews;
 use hacker_news::util::init_logger;
-// use hacker_news::error::HnError;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     init_logger();
 
 
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let matches = app.get_matches_from(env::args_os());
 
     // TODO: Implement nice error printing on HnError
-    if let Err(err) = HackerNews::cmd(&matches) {
+    if let Err(err) = HackerNews::cmd(&matches).await {
         err.formatted_print();
         std::process::exit(1);
     }

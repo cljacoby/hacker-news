@@ -1,5 +1,4 @@
-use crate::client::html_client::Client;
-use crate::client::json_client::JsonClient as Client;
+use crate::client::HnClient;
 use clap::App;
 use clap::SubCommand;
 use clap::Arg;

@@ -22,8 +22,6 @@ impl HttpError {
 
 #[derive(Debug)]
 pub enum HnError {
-    // Error used when parsing of an HTML document fails
-    HtmlParsingError,
     // Error used when program attempts to invoke an action requiring authentication,
     // but is not authenticated
     UnauthenticatedError,
@@ -42,9 +40,6 @@ pub enum HnError {
 impl Display for HnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HnError::HtmlParsingError => {
-                write!(f, "There was a problem parsing HTML data. This is an internal library error.")
-            },
             HnError::UnauthenticatedError => {
                 write!(f, "An unauthenticated client attempted an action requiring authentication.")
             }
@@ -82,7 +77,6 @@ impl Display for HnError {
 impl HnError {
     pub fn variant_str(&self) -> &'static str {
         match self {
-            HnError::HtmlParsingError => "HtmlParsingError",
             HnError::UnauthenticatedError => "UnauthenticatedError",
             HnError::AuthenticationError => "AuthenticationError",
             HnError::HttpError(_http_err) => "HttpError",

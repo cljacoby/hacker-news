@@ -11,21 +11,19 @@ pub(crate) mod news;
 pub mod hacker_news;
 
 /// A trait defining the interface to add a subcommand to the command line
-/// application. 
+/// application.
+#[allow(async_fn_in_trait)]
 pub trait HnCommand {
 
-    /// The name of this subcommand. Will be used at the command line interface
-    /// to name this subcommand.
+    /// The name of this subcommand.
     const NAME: &'static str;
 
     /// A function which returns a [clap](https://docs.rs/clap/2.33.3/clap/index.html)
-    /// App instance. This App will be used as a subcommand in the over all command line
-    /// application structure.
+    /// [App] instance. This [App] will be used as a subcommand in the over all CLI.
     fn parser<'a, 'b>() -> App<'a, 'b>;
 
-    /// The command executed when this subcommand is actually run. This function receives a
-    /// [clap](https://docs.rs/clap/2.33.3/clap/index.html) ArgMatches instance, which can
-    /// drive optional or argument based logic.
+    /// The 'main' function subcommand is actually invoked. This function receives an
+    /// [ArgMatches] instance to define it's behavior.
     // fn cmd(matches: &ArgMatches) -> Result<(), Box<dyn Error>>;
-    fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>>;
+    async fn cmd(matches: &ArgMatches) -> Result<(), Box<HnError>>;
 }
