@@ -34,7 +34,9 @@ pub enum HnError {
     // Error from incorrect Argument configuration from the user
     ArgumentError(Option<&'static str>),
     // Error due to inability to Serialize or Deserialize data with respect to a type.
-    SerializationError(Option<&'static str>)
+    SerializationError(Option<&'static str>),
+    // HACK: catch all variant
+    Unknown,
 }
 
 impl Display for HnError {
@@ -69,6 +71,9 @@ impl Display for HnError {
                     Some(msg) => write!(f, "Failed to serialize/deseralize data structure. {}.", msg),
                     None => write!(f, "Failed to serialize/deseralize data structure."),
                 }
+            },
+            HnError::Unknown => {
+                write!(f, "uknown error.")
             }
         }
     }
@@ -83,6 +88,7 @@ impl HnError {
             HnError::NetworkError(_source) => "NetworkErr",
             HnError::ArgumentError(_msg) => "ArgumentError",
             HnError::SerializationError(_msg) => "SerializationError",
+            HnError::Unknown => "Unknown",
         }
     }
 }

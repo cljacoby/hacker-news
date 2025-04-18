@@ -19,14 +19,15 @@ path = "src/main.rs"
 clap = "2.34.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
-serde_with = "3.6.0"
 reqwest = { version = "0.11", features = ["blocking", "json", "cookies"] }
 log = "0.4.20"
-env_logger = "0.11.7"
 # grid-printer = "0.1.1"
 termcolor = "1.4.1"
 # todo: using `full` because I'm lazy, see what specific features are actually used 
 tokio = { version = "1.44.1", features = ["full"] }
+futures = "0.3.31"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 
 [dev-dependencies]
 lazy_static = "1.4.7"

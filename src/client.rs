@@ -11,6 +11,12 @@ use crate::model::Id;
 use crate::model::firebase::User;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
+use futures::stream::{self, StreamExt};
+use std::sync::Arc;
+use log::debug;
+use std::{collections::HashMap};
+use tokio::sync::{mpsc, Mutex};
+use tokio::task::JoinSet;
 
 #[derive(Debug)]
 pub struct HnClient {
@@ -67,6 +73,73 @@ impl HnClient {
         log::debug!("item = {:?}", item);
 
         Ok(item)
+    }
+
+    /// Retrieve a thread of comments
+    pub async fn thread(self: Arc<Self>, id: Id) -> HashMap<Id, Item> {
+        let (tx, mut rx) = mpsc::channel::<Id>(1000);
+        let items = Arc::new(Mutex::new(HashMap::new()));
+        let mut join_set = JoinSet::new();
+
+        // Begin by querying the top level ID
+        tx.send(id).await.unwrap();
+
+        while let Some(id) = rx.recv().await {
+            let tx = tx.clone();
+            let me = self.clone();
+            let client = me.http_client.clone();
+            let items_clone = items.clone();
+            let sender_strong_count = rx.sender_strong_count();
+            let sender_weak_count = rx.sender_weak_count();
+
+            join_set.spawn(async move {
+                tracing::info!(id=?id, sender_strong_count=?sender_strong_count, sender_weak_count=?sender_weak_count, "fetching item");
+                let item = match me.item(id).await {
+                    Ok(item) => item,
+                    Err(_) => return,
+                };
+                if let Some(kids) = item.kids() {
+                    for kid_id in kids.iter() {
+                        tx.send(*kid_id).await.unwrap();
+                    }
+                }
+                items_clone.lock().await.insert(id, item);
+            });
+        }
+
+        tracing::info!(id=?id, "exit while loop");
+
+        join_set.join_all().await;
+        tracing::info!(id=?id, "finish join set");
+        
+        Arc::try_unwrap(items)
+            .unwrap()
+            .into_inner()
+    }
+
+    pub async fn items(
+        &self,
+        ids: &[Id],
+        // max_concurrent: Option<usize>
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        let client = Arc::new(self);
+        let limit = 10;
+
+        // Convert the vector of IDs into a stream of futures
+        let stream = stream::iter(ids)
+            .map(move |id| {
+                let client = client.clone();
+                async move {
+                    debug!("fetching item {:#?}", id);
+                    let item = client.item(*id).await?;
+                    debug!("finished item {:#?}", id);
+                    Ok::<Item, Box<dyn Error>>(item)
+                }
+            })
+            .buffered(limit)
+            .collect::<Vec<Result<Item, Box<dyn Error>>>>()
+            .await;
+        stream.into_iter().collect::<Result<Vec<Item>, Box<dyn Error>>>()
     }
     
     /// Retrieve the maximum [Item] from the API.

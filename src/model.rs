@@ -9,6 +9,7 @@ pub struct Date(pub u16, pub u8, pub u8);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Thread {
+    // todo: why isn't listing just an `Item`? why do we need another type.
     pub listing: Listing,
     pub comments: Vec<Comment>,
 }
@@ -184,6 +185,18 @@ pub mod firebase {
         Poll(Poll),
         #[serde(rename = "pollopt")]
         PollOption(PollOption),
+    }
+
+    impl Item {
+        pub fn kids(&self) -> &Option<Vec<Id>> {
+            match self {
+                Self::Job(x) => &x.kids,
+                Self::Story(x) => &x.kids,
+                Self::Comment(x) => &x.kids,
+                Self::Poll(x) => &x.kids,
+                Self::PollOption(x) => &x.kids,
+            }
+        }
     }
 
     #[derive(Serialize, Deserialize, Debug)]

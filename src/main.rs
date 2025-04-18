@@ -2,11 +2,10 @@ use std::env;
 use std::error::Error;
 use hacker_news::cli::HnCommand;
 use hacker_news::cli::hacker_news::HackerNews;
-use hacker_news::util::init_logger;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    init_logger();
+    tracing_subscriber::fmt::init();
 
 
     let app = HackerNews::parser();
