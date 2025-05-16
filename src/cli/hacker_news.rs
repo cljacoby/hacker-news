@@ -1,8 +1,8 @@
 // use crate::cli::login::Login;
 // use crate::cli::tree::Tree;
 // use crate::cli::thread::Thread;
-use crate::cli::query::Query;
 use crate::cli::news::News;
+use crate::cli::query::Query;
 use crate::cli::HnCommand;
 use crate::error::HnError;
 use clap::App;
@@ -18,9 +18,9 @@ impl HnCommand for HackerNews {
         App::new(Self::NAME)
             .subcommand(News::parser())
             .subcommand(Query::parser())
-            // .subcommand(Tree::parser())
-            // .subcommand(Login::parser())
-            // .subcommand(Thread::parser())
+        // .subcommand(Tree::parser())
+        // .subcommand(Login::parser())
+        // .subcommand(Thread::parser())
     }
 
     async fn cmd(matches: &ArgMatches<'_>) -> Result<(), Box<HnError>> {

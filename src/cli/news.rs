@@ -1,7 +1,7 @@
+use crate::client::HnClient;
 use clap::App;
 use clap::ArgMatches;
 use clap::SubCommand;
-use crate::client::HnClient;
 
 use crate::cli::HnCommand;
 use crate::error::HnError;
@@ -22,27 +22,27 @@ impl HnCommand for News {
     async fn cmd(_matches: &ArgMatches<'_>) -> Result<(), Box<HnError>> {
         let hn_client = HnClient::new();
         let top = hn_client.top_stories().await.unwrap();
-        let stories: Vec<Story> = hn_client.items(&top[..30])
+        let stories: Vec<Story> = hn_client
+            .items(&top[..30])
             .await
             .unwrap()
             .into_iter()
-            .filter_map(|item| {
-                match item {
-                    Item::Story(story) => Some(story),
-                    _ => None
-                }
+            .filter_map(|item| match item {
+                Item::Story(story) => Some(story),
+                _ => None,
             })
             .collect();
         tracing::debug!("stories: {:?}", stories);
 
         for story in stories {
-            println!("{id}|{title}|{by}",
-                id=story.id, title=story.title.unwrap(), by=story.by.unwrap()
+            println!(
+                "{id}|{title}|{by}",
+                id = story.id,
+                title = story.title.unwrap(),
+                by = story.by.unwrap()
             );
         }
 
         Ok(())
     }
-
 }
-

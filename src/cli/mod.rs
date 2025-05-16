@@ -14,7 +14,6 @@ pub mod hacker_news;
 /// application.
 #[allow(async_fn_in_trait)]
 pub trait HnCommand {
-
     /// The name of this subcommand.
     const NAME: &'static str;
 

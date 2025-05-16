@@ -1,20 +1,22 @@
-use std::error::Error;
+use crate::error::HnError;
+use crate::error::HttpError;
+use crate::model::Id;
 use log;
-use serde_json;
 use reqwest;
 use reqwest::Client;
 use reqwest::Request;
 use reqwest::Response;
-use crate::error::HnError;
-use crate::error::HttpError;
-use crate::model::Id;
-use crate::model::firebase::User;
+use serde_json;
+use std::error::Error;
+// use crate::model::Thread;
+// use crate::model::Listing;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
+use crate::model::firebase::User;
 use futures::stream::{self, StreamExt};
-use std::sync::Arc;
 use log::debug;
-use std::{collections::HashMap};
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinSet;
 
@@ -27,20 +29,19 @@ const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
 
 #[allow(clippy::new_without_default)]
 impl HnClient {
-
     pub fn new() -> Self {
         Self {
-            http_client: Client::new(), 
+            http_client: Client::new(),
         }
     }
-    
+
     /// Send an HTTP request.
     async fn send(&self, req: Request) -> Result<Response, Box<dyn Error>> {
         let resp = self.http_client.execute(req).await?;
         let status = resp.status().as_u16();
         if status != 200 {
             let err = HttpError {
-                url:  resp.url().to_string(),
+                url: resp.url().to_string(),
                 code: status,
             };
             log::error!("Recieved non 200 status: {:?}", err);
@@ -50,7 +51,7 @@ impl HnClient {
 
         Ok(resp)
     }
-    
+
     /// Send an HTTP GET request.
     async fn get(&self, url: &str) -> Result<Response, Box<dyn Error>> {
         let req = self.http_client.get(url);
@@ -60,11 +61,8 @@ impl HnClient {
     }
 
     /// Retrieve an [Item] from the API.
-    pub async fn item(&self, id: Id) -> Result <Item, Box<dyn Error>> {
-        let url = format!("{base_url}/item/{id}.json",
-            base_url=BASE_URL,
-            id=id
-        );
+    pub async fn item(&self, id: Id) -> Result<Item, Box<dyn Error>> {
+        let url = format!("{base_url}/item/{id}.json", base_url = BASE_URL, id = id);
 
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
@@ -75,8 +73,22 @@ impl HnClient {
         Ok(item)
     }
 
+    pub async fn thread(self: Arc<Self>, id: Id) -> Result<Item, Box<dyn Error>> {
+        let item = self.item(id).await?;
+        assert!(
+            matches!(item, Item::Story(_)),
+            "currently only support loading a thread from a story"
+        );
+        // let listing = Listing::from(item);
+        // let comments = Vec::with_capacity(listing);
+        // let mut thread = Thread { listings };
+
+        unimplemented!("have not implemented thread functionality");
+    }
+
+    // compiles but doesn't work
     /// Retrieve a thread of comments
-    pub async fn thread(self: Arc<Self>, id: Id) -> HashMap<Id, Item> {
+    pub async fn _thread(self: Arc<Self>, id: Id) -> HashMap<Id, Item> {
         let (tx, mut rx) = mpsc::channel::<Id>(1000);
         let items = Arc::new(Mutex::new(HashMap::new()));
         let mut join_set = JoinSet::new();
@@ -87,7 +99,7 @@ impl HnClient {
         while let Some(id) = rx.recv().await {
             let tx = tx.clone();
             let me = self.clone();
-            let client = me.http_client.clone();
+            let _client = me.http_client.clone();
             let items_clone = items.clone();
             let sender_strong_count = rx.sender_strong_count();
             let sender_weak_count = rx.sender_weak_count();
@@ -111,10 +123,8 @@ impl HnClient {
 
         join_set.join_all().await;
         tracing::info!(id=?id, "finish join set");
-        
-        Arc::try_unwrap(items)
-            .unwrap()
-            .into_inner()
+
+        Arc::try_unwrap(items).unwrap().into_inner()
     }
 
     pub async fn items(
@@ -139,15 +149,15 @@ impl HnClient {
             .buffered(limit)
             .collect::<Vec<Result<Item, Box<dyn Error>>>>()
             .await;
-        stream.into_iter().collect::<Result<Vec<Item>, Box<dyn Error>>>()
+        stream
+            .into_iter()
+            .collect::<Result<Vec<Item>, Box<dyn Error>>>()
     }
-    
+
     /// Retrieve the maximum [Item] from the API.
-    pub async fn max_item(&self) -> Result <Id, Box<dyn Error>> {
-        let url = format!("{base_url}/maxitem.json",
-            base_url=BASE_URL,
-        );
-        
+    pub async fn max_item(&self) -> Result<Id, Box<dyn Error>> {
+        let url = format!("{base_url}/maxitem.json", base_url = BASE_URL,);
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -158,11 +168,12 @@ impl HnClient {
     }
 
     pub async fn user(&self, username: String) -> Result<User, Box<dyn Error>> {
-        let url = format!("{base_url}/user/{id}.json",
-            base_url=BASE_URL,
-            id=username
+        let url = format!(
+            "{base_url}/user/{id}.json",
+            base_url = BASE_URL,
+            id = username
         );
-        
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -178,10 +189,8 @@ impl HnClient {
     // and then have a single `request` method which executes a request?
 
     pub async fn new_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
-        let url = format!("{base_url}/newstories.json",
-            base_url=BASE_URL,
-        );
-        
+        let url = format!("{base_url}/newstories.json", base_url = BASE_URL,);
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -192,10 +201,8 @@ impl HnClient {
     }
 
     pub async fn top_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
-        let url = format!("{base_url}/topstories.json",
-            base_url=BASE_URL,
-        );
-        
+        let url = format!("{base_url}/topstories.json", base_url = BASE_URL,);
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -206,10 +213,8 @@ impl HnClient {
     }
 
     pub async fn updates(&self) -> Result<(Vec<Id>, Vec<String>), Box<dyn Error>> {
-        let url = format!("{base_url}/updates.json",
-            base_url=BASE_URL,
-        );
-        
+        let url = format!("{base_url}/updates.json", base_url = BASE_URL,);
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -223,9 +228,7 @@ impl HnClient {
     }
 
     pub async fn ask_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
-        let url = format!("{base_url}/askstories.json",
-            base_url=BASE_URL,
-        );
+        let url = format!("{base_url}/askstories.json", base_url = BASE_URL,);
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -236,10 +239,8 @@ impl HnClient {
     }
 
     pub async fn show_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
-        let url = format!("{base_url}/showstories.json",
-            base_url=BASE_URL,
-        );
-        
+        let url = format!("{base_url}/showstories.json", base_url = BASE_URL,);
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -248,12 +249,10 @@ impl HnClient {
 
         Ok(ids)
     }
-    
+
     pub async fn job_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
-        let url = format!("{base_url}/jobstories.json",
-            base_url=BASE_URL,
-        );
-        
+        let url = format!("{base_url}/jobstories.json", base_url = BASE_URL,);
+
         let resp = self.get(&url).await?;
         let text = resp.text().await?;
         log::debug!("text = {:?}", text);
@@ -262,17 +261,17 @@ impl HnClient {
 
         Ok(ids)
     }
-
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::HnClient;
-    use std::error::Error;
+    use crate::model::firebase::Item;
     use crate::util::setup;
+    use std::error::Error;
 
-    #[test]
+    #[tokio::test]
     async fn test_item() -> Result<(), Box<dyn Error>> {
         setup();
 
@@ -283,7 +282,7 @@ mod tests {
         let story = client.item(id_story).await?;
         log::debug!("item = {:?}", story);
         assert!(story.is_story());
-        
+
         let comment = client.item(id_comment).await?;
         log::debug!("item = {:?}", comment);
         assert!(comment.is_comment());
@@ -291,89 +290,89 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_max_item() -> Result<(), Box<dyn Error>> {
+    #[tokio::test]
+    async fn test_max_item() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let item = client.max_item()?;
+        let item = client.max_item().await?;
         log::debug!("maxitem = {:?}", item);
 
         Ok(())
     }
-    
-    #[test]
-    fn test_user() -> Result<(), Box<dyn Error>> {
+
+    #[tokio::test]
+    async fn test_user() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let user = client.user("pg".to_string())?;
+        let user = client.user("pg".to_string()).await?;
         log::debug!("user = {:?}", user);
 
         Ok(())
     }
-    
-    #[test]
-    fn test_new_stories() -> Result<(), Box<dyn Error>> {
+
+    #[tokio::test]
+    async fn test_new_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let ids = client.new_stories()?;
+        let ids = client.new_stories().await?;
         log::debug!("ids = {:?}", ids);
 
         Ok(())
     }
-    
-    #[test]
-    fn test_top_stories() -> Result<(), Box<dyn Error>> {
+
+    #[tokio::test]
+    async fn test_top_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let ids = client.top_stories()?;
+        let ids = client.top_stories().await?;
         log::debug!("ids = {:?}", ids);
 
         Ok(())
     }
-    
-    #[test]
-    fn test_updates() -> Result<(), Box<dyn Error>> {
+
+    #[tokio::test]
+    async fn test_updates() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let updates = client.updates()?;
+        let updates = client.updates().await?;
         log::debug!("updates = {:?}", updates);
 
         Ok(())
     }
-    
-    #[test]
-    fn test_ask_stories() -> Result<(), Box<dyn Error>> {
+
+    #[tokio::test]
+    async fn test_ask_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let ids = client.ask_stories()?;
-        log::debug!("ids = {:?}", ids);
-
-        Ok(())
-    }
-    
-    #[test]
-    fn test_show_stories() -> Result<(), Box<dyn Error>> {
-        setup();
-
-        let client = HnClient::new();
-        let ids = client.show_stories()?;
+        let ids = client.ask_stories().await?;
         log::debug!("ids = {:?}", ids);
 
         Ok(())
     }
 
-    #[test]
-    fn test_job_stories() -> Result<(), Box<dyn Error>> {
+    #[tokio::test]
+    async fn test_show_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
         let client = HnClient::new();
-        let ids = client.job_stories()?;
+        let ids = client.show_stories().await?;
+        log::debug!("ids = {:?}", ids);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_job_stories() -> Result<(), Box<dyn Error>> {
+        setup();
+
+        let client = HnClient::new();
+        let ids = client.job_stories().await?;
         log::debug!("ids = {:?}", ids);
 
         Ok(())

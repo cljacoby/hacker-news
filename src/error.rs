@@ -1,11 +1,11 @@
 use std::error::Error;
-use std::fmt::Display;
 use std::fmt;
+use std::fmt::Display;
 use std::io::Write;
 use termcolor::BufferWriter;
+use termcolor::Color;
 use termcolor::ColorChoice;
 use termcolor::ColorSpec;
-use termcolor::Color;
 use termcolor::WriteColor;
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ pub enum HnError {
     UnauthenticatedError,
     // Error used when a client fails to authenticate
     AuthenticationError,
-    // Error raised from a failure during an HTTP request/response 
+    // Error raised from a failure during an HTTP request/response
     HttpError(HttpError),
     // Error raised from Network connectivity problems
     NetworkError(Option<Box<dyn Error>>),
@@ -43,34 +43,32 @@ impl Display for HnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HnError::UnauthenticatedError => {
-                write!(f, "An unauthenticated client attempted an action requiring authentication.")
+                write!(
+                    f,
+                    "An unauthenticated client attempted an action requiring authentication."
+                )
             }
             HnError::AuthenticationError => {
                 write!(f, "A Hacker News client failed to authenticate.")
             }
             HnError::HttpError(http_err) => {
-                write!(f, "Unsuccesful HTTP response code, url '{}', code '{}'",
-                    http_err.url,
-                    http_err.code,
+                write!(
+                    f,
+                    "Unsuccesful HTTP response code, url '{}', code '{}'",
+                    http_err.url, http_err.code,
                 )
-            },
-            HnError::NetworkError(src) => {
-                match src {
-                    Some(src) => write!(f, "Failed to make network request. {}", src.to_string()),
-                    None => write!(f, "Failed to make network request."),
-                }
-            },
-            HnError::ArgumentError(msg) => {
-                match msg {
-                    None => write!(f, "Incorrect argument configuration."),
-                    Some(msg) => write!(f, "Incorrect argument configuration. {}.", msg),
-                }
             }
-            HnError::SerializationError(msg) => {
-                match msg {
-                    Some(msg) => write!(f, "Failed to serialize/deseralize data structure. {}.", msg),
-                    None => write!(f, "Failed to serialize/deseralize data structure."),
-                }
+            HnError::NetworkError(src) => match src {
+                Some(src) => write!(f, "Failed to make network request. {}", src.to_string()),
+                None => write!(f, "Failed to make network request."),
+            },
+            HnError::ArgumentError(msg) => match msg {
+                None => write!(f, "Incorrect argument configuration."),
+                Some(msg) => write!(f, "Incorrect argument configuration. {}.", msg),
+            },
+            HnError::SerializationError(msg) => match msg {
+                Some(msg) => write!(f, "Failed to serialize/deseralize data structure. {}.", msg),
+                None => write!(f, "Failed to serialize/deseralize data structure."),
             },
             HnError::Unknown => {
                 write!(f, "uknown error.")
@@ -125,18 +123,18 @@ impl Colorizer {
             match piece.1 {
                 Style::Good => {
                     color.set_fg(Some(Color::Green));
-                },
+                }
                 Style::Warning => {
                     color.set_fg(Some(Color::Yellow));
-                },
+                }
                 Style::Error => {
                     color.set_fg(Some(Color::Red));
                     color.set_bold(true);
-                },
+                }
                 Style::Hint => {
                     color.set_dimmed(true);
                     color.set_italic(true);
-                },
+                }
                 Style::Default => {}
             }
 
@@ -153,13 +151,15 @@ impl Colorizer {
 
 impl HnError {
     pub fn formatted_print(&self) {
-        let mut colorizer = Colorizer {
-            pieces: vec![],
-        };
+        let mut colorizer = Colorizer { pieces: vec![] };
 
         colorizer.pieces.push(("error: ".to_string(), Style::Error));
-        colorizer.pieces.push((format!("{}\n", self), Style::Default));
-        colorizer.pieces.push((format!("{}\n", self.variant_str()), Style::Hint));
+        colorizer
+            .pieces
+            .push((format!("{}\n", self), Style::Default));
+        colorizer
+            .pieces
+            .push((format!("{}\n", self.variant_str()), Style::Hint));
 
         if let Err(_err) = colorizer.print() {
             log::error!("Failed formatted color print of {}", self);
@@ -167,6 +167,5 @@ impl HnError {
         }
     }
 }
-
 
 impl Error for HnError {}
