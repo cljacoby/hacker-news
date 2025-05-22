@@ -4,6 +4,7 @@ use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
+use log::debug;
 
 use crate::cli::HnCommand;
 use crate::client::HnClient;
@@ -40,15 +41,15 @@ impl HnCommand for Query {
 
         // todo: tmp testing, delete
         let client = Arc::new(client);
-        println!("item = {:#?}", item);
+        debug!("item = {:#?}", item);
 
-        let thread = client.thread(43639280).await;
+        let thread = client.thread(item.id()).await;
         // .map_err(|err| {
         //     tracing::error!(err=?err, "failed query command");
         //     Box::new(HnError::Unknown)
         // })?;
 
-        println!("thread = {:#?}", thread);
+        debug!("thread = {:#?}", thread);
 
         Ok(())
     }

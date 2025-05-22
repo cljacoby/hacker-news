@@ -1,15 +1,18 @@
 use crate::error::HnError;
 use crate::error::HttpError;
 use crate::model::Id;
+use futures::stream::FuturesUnordered;
 use log;
 use reqwest;
 use reqwest::Client;
 use reqwest::Request;
 use reqwest::Response;
 use serde_json;
+use std::collections::VecDeque;
 use std::error::Error;
 // use crate::model::Thread;
 // use crate::model::Listing;
+use crate::model::firebase::Comment;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
 use crate::model::firebase::User;
@@ -19,8 +22,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinSet;
+use tokio::time::{timeout, Duration};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HnClient {
     http_client: Client,
 }
@@ -56,6 +60,8 @@ impl HnClient {
     async fn get(&self, url: &str) -> Result<Response, Box<dyn Error>> {
         let req = self.http_client.get(url);
         let resp = self.send(req.build()?).await?;
+        let status = resp.status();
+        tracing::info!(url=?url, status=?status, "finished http get");
 
         Ok(resp)
     }
@@ -82,49 +88,52 @@ impl HnClient {
         // let listing = Listing::from(item);
         // let comments = Vec::with_capacity(listing);
         // let mut thread = Thread { listings };
+        // unimplemented!("have not implemented thread functionality");
+        let _ = self._thread(id).await;
 
-        unimplemented!("have not implemented thread functionality");
+        Ok(item)
     }
 
     // compiles but doesn't work
     /// Retrieve a thread of comments
     pub async fn _thread(self: Arc<Self>, id: Id) -> HashMap<Id, Item> {
-        let (tx, mut rx) = mpsc::channel::<Id>(1000);
         let items = Arc::new(Mutex::new(HashMap::new()));
-        let mut join_set = JoinSet::new();
+        let mut queue = VecDeque::from([id]);
+        let mut in_flight = FuturesUnordered::new();
 
-        // Begin by querying the top level ID
-        tx.send(id).await.unwrap();
+        loop {
+            while let Some(id) = queue.pop_front() {
+                tracing::info!(id=?id, "initiating request");
+                let client = self.clone();
+                in_flight.push(async move { (id, client.item(id).await) });
+            }
 
-        while let Some(id) = rx.recv().await {
-            let tx = tx.clone();
-            let me = self.clone();
-            let _client = me.http_client.clone();
-            let items_clone = items.clone();
-            let sender_strong_count = rx.sender_strong_count();
-            let sender_weak_count = rx.sender_weak_count();
-
-            join_set.spawn(async move {
-                tracing::info!(id=?id, sender_strong_count=?sender_strong_count, sender_weak_count=?sender_weak_count, "fetching item");
-                let item = match me.item(id).await {
-                    Ok(item) => item,
-                    Err(_) => return,
-                };
-                if let Some(kids) = item.kids() {
-                    for kid_id in kids.iter() {
-                        tx.send(*kid_id).await.unwrap();
+            match in_flight.next().await {
+                Some((_id, Ok(item))) => {
+                    let id = item.id();
+                    tracing::info!(item_id=?item.id(), "fetched item");
+                    if let Some(kids) = item.kids() {
+                        for kid in kids {
+                            tracing::info!(kid=?kid, "queueing new id");
+                            queue.push_back(*kid);
+                        }
                     }
+                    items.lock().await.insert(id, item);
                 }
-                items_clone.lock().await.insert(id, item);
-            });
+                Some((id, Err(err))) => {
+                    tracing::error!(err=?err, id=?id, "fetch comment failed, requeue");
+                    queue.push_back(id);
+                }
+                None => {
+                    tracing::info!("exhausted in_flight, breaking");
+                    break;
+                }
+            }
         }
 
-        tracing::info!(id=?id, "exit while loop");
+        let items = Arc::try_unwrap(items).unwrap().into_inner();
 
-        join_set.join_all().await;
-        tracing::info!(id=?id, "finish join set");
-
-        Arc::try_unwrap(items).unwrap().into_inner()
+        items
     }
 
     pub async fn items(

@@ -168,6 +168,26 @@ impl Item {
             Self::PollOption(x) => &x.kids,
         }
     }
+
+    pub fn id(&self) -> Id {
+        match self {
+            Self::Job(x) => x.id,
+            Self::Story(x) => x.id,
+            Self::Comment(x) => x.id,
+            Self::Poll(x) => x.id,
+            Self::PollOption(x) => x.id,
+        }
+    }
+
+    pub fn deleted(&self) -> bool {
+        match self {
+            Self::Job(x) => x.deleted,
+            Self::Story(x) => x.deleted,
+            Self::Comment(x) => x.deleted,
+            Self::Poll(x) => x.deleted,
+            Self::PollOption(x) => x.deleted,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
