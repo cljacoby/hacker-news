@@ -11,15 +11,10 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose
-# Note: For now disable `cargo test` in the github workflow, because
-# there are some tests that fail due to missing environment variables,
-# or missing test data.
-#   - name: Run tests
-#     run: cargo test --verbose
+      - uses: actions/checkout@v2
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
