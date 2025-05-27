@@ -57,11 +57,12 @@ impl HnClient {
     }
 
     /// Send an HTTP GET request.
+    #[tracing::instrument(skip(self))]
     async fn get(&self, url: &str) -> Result<Response, Box<dyn Error>> {
         let req = self.http_client.get(url);
         let resp = self.send(req.build()?).await?;
         let status = resp.status();
-        tracing::info!(url=?url, status=?status, "finished http get");
+        tracing::info!(status=?status);
 
         Ok(resp)
     }
@@ -79,6 +80,7 @@ impl HnClient {
         Ok(item)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn thread(self: Arc<Self>, id: Id) -> Result<Item, Box<dyn Error>> {
         let item = self.item(id).await?;
         assert!(
@@ -103,7 +105,7 @@ impl HnClient {
 
         loop {
             while let Some(id) = queue.pop_front() {
-                tracing::info!(id=?id, "initiating request");
+                tracing::debug!(id=?id, "initiating request");
                 let client = self.clone();
                 in_flight.push(async move { (id, client.item(id).await) });
             }
@@ -111,21 +113,21 @@ impl HnClient {
             match in_flight.next().await {
                 Some((_id, Ok(item))) => {
                     let id = item.id();
-                    tracing::info!(item_id=?item.id(), "fetched item");
+                    tracing::debug!(item_id=?item.id(), "fetched item");
                     if let Some(kids) = item.kids() {
                         for kid in kids {
-                            tracing::info!(kid=?kid, "queueing new id");
+                            tracing::debug!(kid=?kid, "queueing new id");
                             queue.push_back(*kid);
                         }
                     }
                     items.lock().await.insert(id, item);
                 }
                 Some((id, Err(err))) => {
-                    tracing::error!(err=?err, id=?id, "fetch comment failed, requeue");
+                    tracing::warn!(err=?err, id=?id, "fetch comment failed, requeue");
                     queue.push_back(id);
                 }
                 None => {
-                    tracing::info!("exhausted in_flight, breaking");
+                    tracing::debug!("exhausted in_flight, breaking");
                     break;
                 }
             }
