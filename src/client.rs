@@ -273,7 +273,6 @@ impl HnClient {
 mod tests {
 
     use super::HnClient;
-    use crate::model::firebase::Item;
     use crate::util::setup;
     use std::error::Error;
 

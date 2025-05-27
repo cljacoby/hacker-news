@@ -3,10 +3,6 @@ mod tests {
 
     use lazy_static::lazy_static;
     use regex::Regex;
-    use std::env;
-    use std::error::Error;
-    use std::fs;
-    use std::path::PathBuf;
 
     // Note: There is an identical setup function in src/lib.rs; however, since integration tests
     // effectively use the crate as if it were an external dependancy, I don't think I can
