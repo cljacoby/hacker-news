@@ -10,9 +10,6 @@ use reqwest::Response;
 use serde_json;
 use std::collections::VecDeque;
 use std::error::Error;
-// use crate::model::Thread;
-// use crate::model::Listing;
-use crate::model::firebase::Comment;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
 use crate::model::firebase::User;
@@ -20,9 +17,7 @@ use futures::stream::{self, StreamExt};
 use log::debug;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
-use tokio::task::JoinSet;
-use tokio::time::{timeout, Duration};
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone)]
 pub struct HnClient {

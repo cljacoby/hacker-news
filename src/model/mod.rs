@@ -1,8 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::model::firebase::Item;
-
 pub(crate) mod firebase;
 
 pub type Score = u32;

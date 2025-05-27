@@ -6,14 +6,7 @@ mod tests {
     use std::env;
     use std::error::Error;
     use std::fs;
-    use std::fs::File;
-    use std::io::Read;
     use std::path::PathBuf;
-    // use scraper::Html;
-    // use hacker_news::parser::HtmlParse;
-    // use hacker_news::parser::ListingsParser;
-    // use hacker_news::parser::CommentsParser;
-    use hacker_news::util::setup;
 
     // Note: There is an identical setup function in src/lib.rs; however, since integration tests
     // effectively use the crate as if it were an external dependancy, I don't think I can
@@ -26,22 +19,22 @@ mod tests {
             .expect("Failed to parse Regex instance: RE_COMMENTS_FILES");
     }
 
-    fn data_dir() -> Result<PathBuf, Box<dyn Error>> {
-        let mut data_dir = env::current_dir()?;
-        data_dir.push("data");
+    // fn data_dir() -> Result<PathBuf, Box<dyn Error>> {
+    //     let mut data_dir = env::current_dir()?;
+    //     data_dir.push("data");
 
-        Ok(data_dir)
-    }
+    //     Ok(data_dir)
+    // }
 
-    fn list_test_files(regex: &Regex) -> Result<Vec<String>, Box<dyn Error>> {
-        let filenames: Vec<String> = fs::read_dir(data_dir()?)?
-            .filter_map(|path| path.ok())
-            .filter_map(|dir_entry| dir_entry.file_name().into_string().ok())
-            .filter(|path| regex.is_match(&path))
-            .collect();
+    // fn list_test_files(regex: &Regex) -> Result<Vec<String>, Box<dyn Error>> {
+    //     let filenames: Vec<String> = fs::read_dir(data_dir()?)?
+    //         .filter_map(|path| path.ok())
+    //         .filter_map(|dir_entry| dir_entry.file_name().into_string().ok())
+    //         .filter(|path| regex.is_match(&path))
+    //         .collect();
 
-        Ok(filenames)
-    }
+    //     Ok(filenames)
+    // }
 
     // #[test]
     // fn test_listings() -> Result<(), Box<dyn Error>> {
