@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
-use log::debug;
+use tracing::info;
 
 use crate::cli::HnCommand;
 use crate::client::HnClient;
@@ -34,22 +32,8 @@ impl HnCommand for Query {
             .map_err(|_| HnError::ArgumentError(Some("id argument not parseable as numeric")))?;
 
         let client = HnClient::new();
-        let item = client.item(id).await.map_err(|err| {
-            tracing::error!(err=?err, "failed query command");
-            Box::new(HnError::Unknown)
-        })?;
-
-        // todo: tmp testing, delete
-        let client = Arc::new(client);
-        debug!("item = {:#?}", item);
-
-        let thread = client.thread(item.id()).await;
-        // .map_err(|err| {
-        //     tracing::error!(err=?err, "failed query command");
-        //     Box::new(HnError::Unknown)
-        // })?;
-
-        debug!("thread = {:#?}", thread);
+        let thread = client.thread(id).await;
+        info!("thread = {:#?}", thread);
 
         Ok(())
     }

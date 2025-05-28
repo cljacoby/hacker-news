@@ -2,7 +2,6 @@ use crate::error::HnError;
 use crate::error::HttpError;
 use crate::model::Id;
 use futures::stream::FuturesUnordered;
-use log;
 use reqwest;
 use reqwest::Client;
 use reqwest::Request;
@@ -13,8 +12,10 @@ use std::error::Error;
 use crate::model::firebase::Item;
 use crate::model::firebase::ItemsAndProfiles;
 use crate::model::firebase::User;
+use crate::model::firebase::Comment;
+use crate::model::firebase::Story;
 use futures::stream::{self, StreamExt};
-use log::debug;
+use tracing::{debug, info, warn};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -22,6 +23,20 @@ use tokio::sync::Mutex;
 #[derive(Debug, Clone)]
 pub struct HnClient {
     http_client: Client,
+}
+
+type CommentMap = HashMap<Id, Comment>;
+
+#[derive(Debug)]
+pub(crate) struct Thread {
+    top: Story,
+    comments: Vec<CommentNode>,
+}
+
+#[derive(Debug)]
+pub(crate) struct CommentNode {
+    comment: Comment,
+    children: Vec<CommentNode>,
 }
 
 const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
@@ -57,7 +72,7 @@ impl HnClient {
         let req = self.http_client.get(url);
         let resp = self.send(req.build()?).await?;
         let status = resp.status();
-        tracing::info!(status=?status);
+        info!(status=?status);
 
         Ok(resp)
     }
@@ -76,31 +91,48 @@ impl HnClient {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn thread(self: Arc<Self>, id: Id) -> Result<Item, Box<dyn Error>> {
+    pub async fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
         let item = self.item(id).await?;
-        assert!(
-            matches!(item, Item::Story(_)),
-            "currently only support loading a thread from a story"
-        );
+        let top = match item {
+            Item::Story(story) => story,
+            _ => unimplemented!("currently only support loading a thread from a Story"),   
+        };
         // let listing = Listing::from(item);
         // let comments = Vec::with_capacity(listing);
         // let mut thread = Thread { listings };
         // unimplemented!("have not implemented thread functionality");
-        let _ = self._thread(id).await;
+        let thread = self._thread(top).await;
 
-        Ok(item)
+       Ok(thread)
     }
 
-    // compiles but doesn't work
-    /// Retrieve a thread of comments
-    pub async fn _thread(self: Arc<Self>, id: Id) -> HashMap<Id, Item> {
-        let items = Arc::new(Mutex::new(HashMap::new()));
-        let mut queue = VecDeque::from([id]);
+    fn build_thread(mut root: CommentNode, comment_map: &mut CommentMap) -> CommentNode {
+        if let Some(ref kids) = root.comment.kids {
+            for kid in kids.iter() {
+                let comment = comment_map.remove(kid).expect("comment not loaded");
+                let child = CommentNode {
+                    comment,
+                    children: vec![],
+                };
+                let child = Self::build_thread(child, comment_map);
+                root.children.push(child);
+            }
+        }
+
+        root
+    }
+
+    async fn _thread(&self, top: Story) -> Thread {
+        let comments = Arc::new(Mutex::new(CommentMap::new()));
+        let mut queue = VecDeque::new();
+        if let Some(ref kids) = top.kids {
+            queue.extend(kids.iter());
+        }
         let mut in_flight = FuturesUnordered::new();
 
         loop {
             while let Some(id) = queue.pop_front() {
-                tracing::debug!(id=?id, "initiating request");
+                debug!(id=?id, "initiating request");
                 let client = self.clone();
                 in_flight.push(async move { (id, client.item(id).await) });
             }
@@ -108,29 +140,51 @@ impl HnClient {
             match in_flight.next().await {
                 Some((_id, Ok(item))) => {
                     let id = item.id();
-                    tracing::debug!(item_id=?item.id(), "fetched item");
-                    if let Some(kids) = item.kids() {
+                    debug!(item_id=?item.id(), "fetched item");
+                    let comment = match item {
+                        Item::Comment(comment) => comment,
+                        _ => {
+                            warn!(item=?item, "while loading comment thread, got non-comment item. discarding.");
+                            continue
+                        }
+                    };
+                    if let Some(ref kids) = comment.kids {
                         for kid in kids {
-                            tracing::debug!(kid=?kid, "queueing new id");
+                            debug!(kid=?kid, "queueing new id");
                             queue.push_back(*kid);
                         }
                     }
-                    items.lock().await.insert(id, item);
+                    comments.lock().await.insert(id, comment);
                 }
                 Some((id, Err(err))) => {
                     tracing::warn!(err=?err, id=?id, "fetch comment failed, requeue");
                     queue.push_back(id);
                 }
                 None => {
-                    tracing::debug!("exhausted in_flight, breaking");
+                    debug!("exhausted in_flight, breaking");
                     break;
                 }
             }
         }
 
-        let items = Arc::try_unwrap(items).unwrap().into_inner();
+        let mut comment_map = Arc::try_unwrap(comments).unwrap().into_inner();
+        let mut thread = Thread {
+            top,
+            comments: vec![],
+        };
+        if let Some(ref kids) = thread.top.kids {
+            for kid in kids {
+                let comment = comment_map.remove(kid).expect("comment not loaded");
+                let child = CommentNode {
+                    comment,
+                    children: vec![],
+                };
+                let child = Self::build_thread(child, &mut comment_map);
+                thread.comments.push(child);
+            }
+        }
 
-        items
+        thread
     }
 
     pub async fn items(
