@@ -1,24 +1,24 @@
 use crate::error::HnError;
 use crate::error::HttpError;
+use crate::model::firebase::Comment;
+use crate::model::firebase::Item;
+use crate::model::firebase::ItemsAndProfiles;
+use crate::model::firebase::Story;
+use crate::model::firebase::User;
 use crate::model::Id;
 use futures::stream::FuturesUnordered;
+use futures::stream::{self, StreamExt};
 use reqwest;
 use reqwest::Client;
 use reqwest::Request;
 use reqwest::Response;
 use serde_json;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::error::Error;
-use crate::model::firebase::Item;
-use crate::model::firebase::ItemsAndProfiles;
-use crate::model::firebase::User;
-use crate::model::firebase::Comment;
-use crate::model::firebase::Story;
-use futures::stream::{self, StreamExt};
-use tracing::{debug, info, warn};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct HnClient {
@@ -95,15 +95,11 @@ impl HnClient {
         let item = self.item(id).await?;
         let top = match item {
             Item::Story(story) => story,
-            _ => unimplemented!("currently only support loading a thread from a Story"),   
+            _ => unimplemented!("currently only support loading a thread from a Story"),
         };
-        // let listing = Listing::from(item);
-        // let comments = Vec::with_capacity(listing);
-        // let mut thread = Thread { listings };
-        // unimplemented!("have not implemented thread functionality");
-        let thread = self._thread(top).await;
+        let thread = self.load_thread(top).await;
 
-       Ok(thread)
+        Ok(thread)
     }
 
     fn build_thread(mut root: CommentNode, comment_map: &mut CommentMap) -> CommentNode {
@@ -122,7 +118,7 @@ impl HnClient {
         root
     }
 
-    async fn _thread(&self, top: Story) -> Thread {
+    async fn load_thread(&self, top: Story) -> Thread {
         let comments = Arc::new(Mutex::new(CommentMap::new()));
         let mut queue = VecDeque::new();
         if let Some(ref kids) = top.kids {
@@ -145,7 +141,7 @@ impl HnClient {
                         Item::Comment(comment) => comment,
                         _ => {
                             warn!(item=?item, "while loading comment thread, got non-comment item. discarding.");
-                            continue
+                            continue;
                         }
                     };
                     if let Some(ref kids) = comment.kids {
