@@ -10,13 +10,12 @@ use crate::cli::HnCommand;
 use crate::client::CommentNode;
 use crate::client::HnClient;
 use crate::error::HnError;
-use crate::model::firebase::Comment;
 use crate::model::Id;
 
 pub struct Query;
 
 impl Query {
-    /// Format a [Comment] for printing in the terminal as an ASCII thread.
+    /// Format a [CommentNode] for printing in the terminal as an ASCII thread.
     fn fmt_comment(cnode: &CommentNode, tree_mode: bool) -> String {
         let author = cnode.comment.by.as_ref().map(|s| s.as_str()).unwrap_or("");
 
