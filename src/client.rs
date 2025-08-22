@@ -1,27 +1,166 @@
 use crate::error::HnError;
 use crate::error::HttpError;
+use crate::model::firebase::Comment;
+use crate::model::firebase::Item;
+use crate::model::firebase::ItemsAndProfiles;
+use crate::model::firebase::Story;
+use crate::model::firebase::User;
 use crate::model::Id;
 use futures::stream::FuturesUnordered;
-use log;
+use futures::stream::{self, Stream, StreamExt};
 use reqwest;
 use reqwest::Client;
 use reqwest::Request;
 use reqwest::Response;
 use serde_json;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::error::Error;
-use crate::model::firebase::Item;
-use crate::model::firebase::ItemsAndProfiles;
-use crate::model::firebase::User;
-use futures::stream::{self, StreamExt};
-use log::debug;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct HnClient {
     http_client: Client,
+}
+
+type CommentMap = HashMap<Id, Comment>;
+
+#[derive(Debug)]
+pub(crate) struct Thread {
+    top: Story,
+    comments: Vec<CommentNode>,
+}
+
+#[derive(Debug)]
+pub struct CommentWalker<'a> {
+    stack: Vec<&'a CommentNode>,
+}
+
+impl<'a> CommentWalker<'a> {
+    #[allow(dead_code)]
+    fn new(thread: &'a Thread) -> Self {
+        let mut stack = Vec::new();
+        stack.extend(thread.comments.iter());
+
+        CommentWalker { stack }
+    }
+}
+
+impl<'a> Iterator for CommentWalker<'a> {
+    type Item = &'a CommentNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let node = self.stack.pop()?;
+        for child in node.children.iter().rev() {
+            self.stack.push(child);
+        }
+
+        Some(&node)
+    }
+}
+
+impl Thread {
+    #[allow(dead_code)]
+    pub fn walk(&self) -> CommentWalker<'_> {
+        CommentWalker::new(self)
+    }
+}
+
+#[derive(Debug)]
+pub struct LazyThread {
+    pub top: Story,
+    // now store fully‑formed nodes so callers can get depth later
+    pub comment_map: Arc<Mutex<HashMap<Id, Arc<CommentNode>>>>,
+    client: Arc<HnClient>,
+}
+
+impl LazyThread {
+    pub fn new(top: Story, client: Arc<HnClient>) -> Self {
+        Self {
+            top,
+            client,
+            comment_map: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// walk the thread breadth‑first, lazily fetching comments.
+    /// every item carries its depth so callers can indent / pretty‑print.
+    pub fn walk(self) -> impl Stream<Item = Result<Arc<CommentNode>, Box<dyn Error>>> {
+        // clone shared state for the unfolding stream
+        let client = self.client.clone();
+        let comment_map = self.comment_map.clone();
+
+        // queue holds (comment_id, depth) so we can build CommentNode on the fly
+        let mut q: VecDeque<(Id, usize)> = VecDeque::new();
+        if let Some(ref kids) = self.top.kids {
+            q.extend(kids.iter().map(|id| (*id, 0)));
+        }
+
+        stream::unfold(
+            (client, comment_map, q),
+            |(client, comment_map, mut q)| async move {
+                loop {
+                    // grab next work item
+                    let (next_id, depth) = match q.pop_front() {
+                        Some(t) => t,
+                        None => return None, // finished
+                    };
+
+                    match client.item(next_id).await {
+                        Ok(item) => match item {
+                            Item::Comment(comment) => {
+                                // enqueue children with depth+1
+                                if let Some(ref kids) = comment.kids {
+                                    q.extend(kids.iter().map(|kid| (*kid, depth + 1)));
+                                }
+
+                                // wrap into a CommentNode so callers get depth
+                                let node = Arc::new(CommentNode::new(depth, comment, vec![]));
+
+                                // remember it for any later tree‑building needs
+                                {
+                                    let mut guard = comment_map.lock().await;
+                                    guard.insert(next_id, node.clone());
+                                }
+
+                                return Some((Ok(node), (client.clone(), comment_map.clone(), q)));
+                            }
+                            // should never happen inside a comment thread
+                            other => {
+                                let err: Box<dyn Error> =
+                                    format!("expected comment, got {:?}", other).into();
+                                return Some((Err(err), (client.clone(), comment_map.clone(), q)));
+                            }
+                        },
+                        // network / parse error: re‑queue and yield the error
+                        Err(e) => {
+                            q.push_back((next_id, depth));
+                            return Some((Err(e), (client.clone(), comment_map.clone(), q)));
+                        }
+                    }
+                }
+            },
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct CommentNode {
+    pub depth: usize,
+    pub comment: Comment,
+    pub children: Vec<CommentNode>,
+}
+
+impl CommentNode {
+    pub fn new(depth: usize, comment: Comment, children: Vec<CommentNode>) -> Self {
+        Self {
+            depth,
+            comment,
+            children,
+        }
+    }
 }
 
 const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
@@ -57,7 +196,7 @@ impl HnClient {
         let req = self.http_client.get(url);
         let resp = self.send(req.build()?).await?;
         let status = resp.status();
-        tracing::info!(status=?status);
+        info!(status=?status);
 
         Ok(resp)
     }
@@ -76,31 +215,53 @@ impl HnClient {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn thread(self: Arc<Self>, id: Id) -> Result<Item, Box<dyn Error>> {
+    pub async fn thread(&self, id: Id) -> Result<Thread, Box<dyn Error>> {
         let item = self.item(id).await?;
-        assert!(
-            matches!(item, Item::Story(_)),
-            "currently only support loading a thread from a story"
-        );
-        // let listing = Listing::from(item);
-        // let comments = Vec::with_capacity(listing);
-        // let mut thread = Thread { listings };
-        // unimplemented!("have not implemented thread functionality");
-        let _ = self._thread(id).await;
+        let top = match item {
+            Item::Story(story) => story,
+            _ => unimplemented!("currently only support loading a thread from a Story"),
+        };
+        let thread = self.load_thread(top).await;
 
-        Ok(item)
+        Ok(thread)
     }
 
-    // compiles but doesn't work
-    /// Retrieve a thread of comments
-    pub async fn _thread(self: Arc<Self>, id: Id) -> HashMap<Id, Item> {
-        let items = Arc::new(Mutex::new(HashMap::new()));
-        let mut queue = VecDeque::from([id]);
+    #[tracing::instrument(skip(self))]
+    pub async fn lazy_thread(&self, id: Id) -> Result<LazyThread, Box<dyn Error>> {
+        let item = self.item(id).await?;
+        let top = match item {
+            Item::Story(story) => story,
+            _ => unimplemented!("currently only support loading a thread from a Story"),
+        };
+        let lazy_thread = LazyThread::new(top, Arc::new(self.clone()));
+
+        Ok(lazy_thread)
+    }
+
+    fn build_thread(mut root: CommentNode, comment_map: &mut CommentMap) -> CommentNode {
+        if let Some(ref kids) = root.comment.kids {
+            for kid in kids.iter() {
+                let comment = comment_map.remove(kid).expect("comment not loaded");
+                let child = CommentNode::new(root.depth + 1, comment, vec![]);
+                let child = Self::build_thread(child, comment_map);
+                root.children.push(child);
+            }
+        }
+
+        root
+    }
+
+    async fn load_thread(&self, top: Story) -> Thread {
+        let comments = Arc::new(Mutex::new(CommentMap::new()));
+        let mut queue = VecDeque::new();
+        if let Some(ref kids) = top.kids {
+            queue.extend(kids.iter());
+        }
         let mut in_flight = FuturesUnordered::new();
 
         loop {
             while let Some(id) = queue.pop_front() {
-                tracing::debug!(id=?id, "initiating request");
+                debug!(id=?id, "initiating request");
                 let client = self.clone();
                 in_flight.push(async move { (id, client.item(id).await) });
             }
@@ -108,29 +269,49 @@ impl HnClient {
             match in_flight.next().await {
                 Some((_id, Ok(item))) => {
                     let id = item.id();
-                    tracing::debug!(item_id=?item.id(), "fetched item");
-                    if let Some(kids) = item.kids() {
+                    debug!(item_id=?item.id(), "fetched item");
+                    let comment = match item {
+                        Item::Comment(comment) => comment,
+                        _ => {
+                            warn!(item=?item, "while loading comment thread, got non-comment item. discarding.");
+                            continue;
+                        }
+                    };
+                    if let Some(ref kids) = comment.kids {
                         for kid in kids {
-                            tracing::debug!(kid=?kid, "queueing new id");
+                            debug!(kid=?kid, "queueing new id");
                             queue.push_back(*kid);
                         }
                     }
-                    items.lock().await.insert(id, item);
+                    comments.lock().await.insert(id, comment);
                 }
                 Some((id, Err(err))) => {
                     tracing::warn!(err=?err, id=?id, "fetch comment failed, requeue");
                     queue.push_back(id);
                 }
                 None => {
-                    tracing::debug!("exhausted in_flight, breaking");
+                    debug!("exhausted in_flight, breaking");
                     break;
                 }
             }
         }
 
-        let items = Arc::try_unwrap(items).unwrap().into_inner();
+        let mut comment_map = Arc::try_unwrap(comments).unwrap().into_inner();
+        let mut thread = Thread {
+            top,
+            comments: vec![],
+        };
+        if let Some(ref kids) = thread.top.kids {
+            for kid in kids {
+                let comment = comment_map.remove(kid).expect("comment not loaded");
+                // todo: kind of weird mechanics around create and build
+                let child = CommentNode::new(0, comment, vec![]);
+                let child = Self::build_thread(child, &mut comment_map);
+                thread.comments.push(child);
+            }
+        }
 
-        items
+        thread
     }
 
     pub async fn items(
