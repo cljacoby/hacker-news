@@ -7,7 +7,7 @@ use crate::model::firebase::Story;
 use crate::model::firebase::User;
 use crate::model::Id;
 use futures::stream::FuturesUnordered;
-use futures::stream::{self, StreamExt};
+use futures::stream::{self, Stream, StreamExt};
 use reqwest;
 use reqwest::Client;
 use reqwest::Request;
@@ -34,9 +34,133 @@ pub(crate) struct Thread {
 }
 
 #[derive(Debug)]
-pub(crate) struct CommentNode {
-    comment: Comment,
-    children: Vec<CommentNode>,
+pub struct CommentWalker<'a> {
+    stack: Vec<&'a CommentNode>,
+}
+
+impl<'a> CommentWalker<'a> {
+    #[allow(dead_code)]
+    fn new(thread: &'a Thread) -> Self {
+        let mut stack = Vec::new();
+        stack.extend(thread.comments.iter());
+
+        CommentWalker { stack }
+    }
+}
+
+impl<'a> Iterator for CommentWalker<'a> {
+    type Item = &'a CommentNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let node = self.stack.pop()?;
+        for child in node.children.iter().rev() {
+            self.stack.push(child);
+        }
+
+        Some(&node)
+    }
+}
+
+impl Thread {
+    #[allow(dead_code)]
+    pub fn walk(&self) -> CommentWalker<'_> {
+        CommentWalker::new(self)
+    }
+}
+
+#[derive(Debug)]
+pub struct LazyThread {
+    pub top: Story,
+    // now store fully‑formed nodes so callers can get depth later
+    pub comment_map: Arc<Mutex<HashMap<Id, Arc<CommentNode>>>>,
+    client: Arc<HnClient>,
+}
+
+impl LazyThread {
+    pub fn new(top: Story, client: Arc<HnClient>) -> Self {
+        Self {
+            top,
+            client,
+            comment_map: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// walk the thread breadth‑first, lazily fetching comments.
+    /// every item carries its depth so callers can indent / pretty‑print.
+    pub fn walk(self) -> impl Stream<Item = Result<Arc<CommentNode>, Box<dyn Error>>> {
+        // clone shared state for the unfolding stream
+        let client = self.client.clone();
+        let comment_map = self.comment_map.clone();
+
+        // queue holds (comment_id, depth) so we can build CommentNode on the fly
+        let mut q: VecDeque<(Id, usize)> = VecDeque::new();
+        if let Some(ref kids) = self.top.kids {
+            q.extend(kids.iter().map(|id| (*id, 0)));
+        }
+
+        stream::unfold(
+            (client, comment_map, q),
+            |(client, comment_map, mut q)| async move {
+                loop {
+                    // grab next work item
+                    let (next_id, depth) = match q.pop_front() {
+                        Some(t) => t,
+                        None => return None, // finished
+                    };
+
+                    match client.item(next_id).await {
+                        Ok(item) => match item {
+                            Item::Comment(comment) => {
+                                // enqueue children with depth+1
+                                if let Some(ref kids) = comment.kids {
+                                    q.extend(kids.iter().map(|kid| (*kid, depth + 1)));
+                                }
+
+                                // wrap into a CommentNode so callers get depth
+                                let node = Arc::new(CommentNode::new(depth, comment, vec![]));
+
+                                // remember it for any later tree‑building needs
+                                {
+                                    let mut guard = comment_map.lock().await;
+                                    guard.insert(next_id, node.clone());
+                                }
+
+                                return Some((Ok(node), (client.clone(), comment_map.clone(), q)));
+                            }
+                            // should never happen inside a comment thread
+                            other => {
+                                let err: Box<dyn Error> =
+                                    format!("expected comment, got {:?}", other).into();
+                                return Some((Err(err), (client.clone(), comment_map.clone(), q)));
+                            }
+                        },
+                        // network / parse error: re‑queue and yield the error
+                        Err(e) => {
+                            q.push_back((next_id, depth));
+                            return Some((Err(e), (client.clone(), comment_map.clone(), q)));
+                        }
+                    }
+                }
+            },
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct CommentNode {
+    pub depth: usize,
+    pub comment: Comment,
+    pub children: Vec<CommentNode>,
+}
+
+impl CommentNode {
+    pub fn new(depth: usize, comment: Comment, children: Vec<CommentNode>) -> Self {
+        Self {
+            depth,
+            comment,
+            children,
+        }
+    }
 }
 
 const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
@@ -102,14 +226,23 @@ impl HnClient {
         Ok(thread)
     }
 
+    #[tracing::instrument(skip(self))]
+    pub async fn lazy_thread(&self, id: Id) -> Result<LazyThread, Box<dyn Error>> {
+        let item = self.item(id).await?;
+        let top = match item {
+            Item::Story(story) => story,
+            _ => unimplemented!("currently only support loading a thread from a Story"),
+        };
+        let lazy_thread = LazyThread::new(top, Arc::new(self.clone()));
+
+        Ok(lazy_thread)
+    }
+
     fn build_thread(mut root: CommentNode, comment_map: &mut CommentMap) -> CommentNode {
         if let Some(ref kids) = root.comment.kids {
             for kid in kids.iter() {
                 let comment = comment_map.remove(kid).expect("comment not loaded");
-                let child = CommentNode {
-                    comment,
-                    children: vec![],
-                };
+                let child = CommentNode::new(root.depth + 1, comment, vec![]);
                 let child = Self::build_thread(child, comment_map);
                 root.children.push(child);
             }
@@ -171,10 +304,8 @@ impl HnClient {
         if let Some(ref kids) = thread.top.kids {
             for kid in kids {
                 let comment = comment_map.remove(kid).expect("comment not loaded");
-                let child = CommentNode {
-                    comment,
-                    children: vec![],
-                };
+                // todo: kind of weird mechanics around create and build
+                let child = CommentNode::new(0, comment, vec![]);
                 let child = Self::build_thread(child, &mut comment_map);
                 thread.comments.push(child);
             }
