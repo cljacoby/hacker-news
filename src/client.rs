@@ -28,7 +28,7 @@ pub struct HnClient {
 type CommentMap = HashMap<Id, Comment>;
 
 #[derive(Debug)]
-pub(crate) struct Thread {
+pub struct Thread {
     top: Story,
     comments: Vec<CommentNode>,
 }
