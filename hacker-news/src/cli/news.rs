@@ -7,7 +7,7 @@ use crate::cli::HnCommand;
 use crate::error::HnError;
 
 // TODO: Should put item -> story conversion within Client code
-use crate::model::firebase::{Item, Story};
+use crate::api::{Item, Story};
 
 /// Get front page listings of Hacker News.
 pub struct News;

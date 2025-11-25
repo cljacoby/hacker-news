@@ -1,11 +1,11 @@
 use crate::error::HnError;
 use crate::error::HttpError;
-use crate::model::firebase::Comment;
-use crate::model::firebase::Item;
-use crate::model::firebase::ItemsAndProfiles;
-use crate::model::firebase::Story;
-use crate::model::firebase::User;
-use crate::model::Id;
+use crate::api::Comment;
+use crate::api::Item;
+use crate::api::ItemsAndProfiles;
+use crate::api::Story;
+use crate::api::User;
+use crate::api::Id;
 use futures::stream::FuturesUnordered;
 use futures::stream::{self, Stream, StreamExt};
 use reqwest;

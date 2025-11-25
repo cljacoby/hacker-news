@@ -10,7 +10,7 @@ use crate::cli::HnCommand;
 use crate::client::CommentNode;
 use crate::client::HnClient;
 use crate::error::HnError;
-use crate::model::Id;
+use crate::api::Id;
 
 pub struct Query;
 

@@ -5,5 +5,5 @@ pub mod config;
 pub mod error;
 // pub mod parser;
 pub mod cli;
-pub mod model;
+pub mod api;
 pub mod util;

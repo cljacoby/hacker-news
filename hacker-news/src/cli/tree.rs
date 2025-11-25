@@ -2,7 +2,7 @@ use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
-// use crate::model::Id;
+// use crate::api::Id;
 use crate::cli::HnCommand;
 use crate::error::HnError;
 

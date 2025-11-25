@@ -1,6 +1,6 @@
 use color_eyre::Result;
 use hacker_news::client::HnClient;
-use hacker_news::model::firebase::{Item, Story};
+use hacker_news::api::{Item, Story};
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},

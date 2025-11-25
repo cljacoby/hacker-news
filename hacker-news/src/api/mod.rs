@@ -1,4 +1,8 @@
-use super::*;
+use serde::Deserialize;
+use serde::Serialize;
+
+pub type Score = u32;
+pub type Id = u32;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -221,8 +225,8 @@ impl Item {
 #[cfg(test)]
 mod tests {
 
-    use super::firebase::Item;
-    use super::firebase::Story;
+    use super::Item;
+    use super::Story;
 
     #[test]
     fn test_item_type() {
