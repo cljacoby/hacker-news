@@ -1,0 +1,10 @@
+[package]
+name = "hacker-news-tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio.workspace = true
+color-eyre = "0.6.5"
+hacker-news = { path = "../hacker-news" }
+ratatui = "0.29.0"

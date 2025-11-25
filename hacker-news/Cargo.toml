@@ -1,0 +1,28 @@
+[package]
+name = "hacker-news"
+version = "0.1.2"
+authors = ["cljacoby <cljacoby@gmail.com>"]
+description = "A library to interact with Hacker News."
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "hacker_news"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hn"
+path = "src/main.rs"
+
+
+[dependencies]
+tokio.workspace = true
+clap = "2.34.0"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+reqwest = { version = "0.11", features = ["blocking", "json", "cookies", "hickory-dns"] }
+log = "0.4.20"
+termcolor = "1.4.1"
+futures = "0.3.31"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["std", "fmt", "env-filter"] }

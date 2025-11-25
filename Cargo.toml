@@ -1,35 +1,9 @@
-[package]
-name = "hacker-news"
-version = "0.1.2"
-authors = ["cljacoby <cljacoby@gmail.com>"]
-description = "A library to interact with Hacker News."
-edition = "2018"
-license = "MIT OR Apache-2.0"
+[workspace]
+resolver = "3"
+members = ["hacker-news", "hacker-news-tui"]
+# todo: my local rust-analyzer does not want to work with `edition = "2024"`
+edition = "2021"
 
-[lib]
-name = "hacker_news"
-path = "src/lib.rs"
-
-[[bin]]
-name = "hn"
-path = "src/main.rs"
-
-
-[dependencies]
-clap = "2.34.0"
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.114"
-reqwest = { version = "0.11", features = ["blocking", "json", "cookies", "hickory-dns"] }
-log = "0.4.20"
-# grid-printer = "0.1.1"
-termcolor = "1.4.1"
+[workspace.dependencies]
 # todo: using `full` because I'm lazy, see what specific features are actually used 
 tokio = { version = "1.44.1", features = ["full"] }
-futures = "0.3.31"
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.20", features = ["std", "fmt", "env-filter"] }
-html2text = "0.15.1"
-
-[dev-dependencies]
-lazy_static = "1.4.7"
-regex = "1.10.3"
