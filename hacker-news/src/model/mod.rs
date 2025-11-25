@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-pub(crate) mod firebase;
+pub mod firebase;
 
 pub type Score = u32;
 pub type Id = u32;
