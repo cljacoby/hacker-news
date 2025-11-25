@@ -38,7 +38,7 @@ impl HnCommand for Tree {
         //     .parse()?;
         // Instantiate client, and retrieve comment data
         // let mut replies: Vec<Comment> = vec![];
-        // let client = HNClient::new();
+        // let client = Client::new();
         // for reply in client.iter_replies(id)? {
         //     let reply = reply?;
         //     replies.push(reply);

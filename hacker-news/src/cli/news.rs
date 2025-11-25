@@ -1,4 +1,4 @@
-use crate::client::HnClient;
+use crate::client::Client;
 use clap::App;
 use clap::ArgMatches;
 use clap::SubCommand;
@@ -20,7 +20,7 @@ impl HnCommand for News {
     }
 
     async fn cmd(_matches: &ArgMatches<'_>) -> Result<(), Box<HnError>> {
-        let hn_client = HnClient::new();
+        let hn_client = Client::new();
         let top = hn_client.top_stories().await.unwrap();
         let stories: Vec<Story> = hn_client
             .items(&top[..30])

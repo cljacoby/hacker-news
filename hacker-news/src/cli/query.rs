@@ -6,11 +6,11 @@ use futures::pin_mut;
 use futures::stream::StreamExt;
 use tracing::{error, info};
 
-use crate::cli::HnCommand;
-use crate::client::CommentNode;
-use crate::client::HnClient;
-use crate::error::HnError;
 use crate::api::Id;
+use crate::cli::HnCommand;
+use crate::client::Client;
+use crate::client::CommentNode;
+use crate::error::HnError;
 
 pub struct Query;
 
@@ -74,7 +74,7 @@ impl HnCommand for Query {
             .parse()
             .map_err(|_| HnError::ArgumentError(Some("id argument not parseable as numeric")))?;
 
-        let client = HnClient::new();
+        let client = Client::new();
         let lazy = matches.is_present("lazy");
         let tree_mode = matches.is_present("tree");
         info!(lazy=?lazy, tree_mode=?tree_mode, "query cmd");

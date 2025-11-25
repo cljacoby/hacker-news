@@ -1,15 +1,15 @@
-use crate::error::HnError;
-use crate::error::HttpError;
 use crate::api::Comment;
+use crate::api::Id;
 use crate::api::Item;
 use crate::api::ItemsAndProfiles;
 use crate::api::Story;
 use crate::api::User;
-use crate::api::Id;
+use crate::error::HnError;
+use crate::error::HttpError;
 use futures::stream::FuturesUnordered;
 use futures::stream::{self, Stream, StreamExt};
 use reqwest;
-use reqwest::Client;
+use reqwest::Client as ReqwestClient;
 use reqwest::Request;
 use reqwest::Response;
 use serde_json;
@@ -21,8 +21,8 @@ use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone)]
-pub struct HnClient {
-    http_client: Client,
+pub struct Client {
+    http_client: ReqwestClient,
 }
 
 type CommentMap = HashMap<Id, Comment>;
@@ -73,11 +73,11 @@ pub struct LazyThread {
     pub top: Story,
     // now store fully‑formed nodes so callers can get depth later
     pub comment_map: Arc<Mutex<HashMap<Id, Arc<CommentNode>>>>,
-    client: Arc<HnClient>,
+    client: Arc<Client>,
 }
 
 impl LazyThread {
-    pub fn new(top: Story, client: Arc<HnClient>) -> Self {
+    pub fn new(top: Story, client: Arc<Client>) -> Self {
         Self {
             top,
             client,
@@ -166,10 +166,10 @@ impl CommentNode {
 const BASE_URL: &str = "https://hacker-news.firebaseio.com/v0";
 
 #[allow(clippy::new_without_default)]
-impl HnClient {
+impl Client {
     pub fn new() -> Self {
         Self {
-            http_client: Client::new(),
+            http_client: ReqwestClient::new(),
         }
     }
 
@@ -374,6 +374,8 @@ impl HnClient {
     // Consider code consolidation, both with respect to these but all the API methods. For
     // example, would it be better for HackerNews Client API methods to create a request object,
     // and then have a single `request` method which executes a request?
+    //
+    // Or alteratively, a proc macro which will generate these.
 
     pub async fn new_stories(&self) -> Result<Vec<Id>, Box<dyn Error>> {
         let url = format!("{base_url}/newstories.json", base_url = BASE_URL,);
@@ -453,7 +455,7 @@ impl HnClient {
 #[cfg(test)]
 mod tests {
 
-    use super::HnClient;
+    use super::Client;
     use crate::util::setup;
     use std::error::Error;
 
@@ -464,7 +466,7 @@ mod tests {
         let id_story = 27476206;
         let id_comment = 27509155;
 
-        let client = HnClient::new();
+        let client = Client::new();
         let story = client.item(id_story).await?;
         log::debug!("item = {:?}", story);
         assert!(story.is_story());
@@ -480,7 +482,7 @@ mod tests {
     async fn test_max_item() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let item = client.max_item().await?;
         log::debug!("maxitem = {:?}", item);
 
@@ -491,7 +493,7 @@ mod tests {
     async fn test_user() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let user = client.user("pg".to_string()).await?;
         log::debug!("user = {:?}", user);
 
@@ -502,7 +504,7 @@ mod tests {
     async fn test_new_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let ids = client.new_stories().await?;
         log::debug!("ids = {:?}", ids);
 
@@ -513,7 +515,7 @@ mod tests {
     async fn test_top_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let ids = client.top_stories().await?;
         log::debug!("ids = {:?}", ids);
 
@@ -524,7 +526,7 @@ mod tests {
     async fn test_updates() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let updates = client.updates().await?;
         log::debug!("updates = {:?}", updates);
 
@@ -535,7 +537,7 @@ mod tests {
     async fn test_ask_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let ids = client.ask_stories().await?;
         log::debug!("ids = {:?}", ids);
 
@@ -546,7 +548,7 @@ mod tests {
     async fn test_show_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let ids = client.show_stories().await?;
         log::debug!("ids = {:?}", ids);
 
@@ -557,7 +559,7 @@ mod tests {
     async fn test_job_stories() -> Result<(), Box<dyn Error>> {
         setup();
 
-        let client = HnClient::new();
+        let client = Client::new();
         let ids = client.job_stories().await?;
         log::debug!("ids = {:?}", ids);
 

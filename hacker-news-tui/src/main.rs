@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use hacker_news::client::HnClient;
+use hacker_news::client::Client;
 use hacker_news::api::{Item, Story};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -16,7 +16,7 @@ struct App {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let hn_client = HnClient::new();
+    let hn_client = Client::new();
     let top = hn_client.top_stories().await.unwrap();
     let stories: Vec<Story> = hn_client
         .items(&top[..30])
