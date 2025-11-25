@@ -1,8 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["hacker-news", "hacker-news-tui"]
-# todo: my local rust-analyzer does not want to work with `edition = "2024"`
-edition = "2021"
 
 [workspace.dependencies]
 # todo: using `full` because I'm lazy, see what specific features are actually used 
