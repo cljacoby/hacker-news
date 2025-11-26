@@ -1,4 +1,4 @@
-use crate::client::HnClient;
+use crate::client::Client;
 use clap::App;
 use clap::SubCommand;
 use clap::Arg;

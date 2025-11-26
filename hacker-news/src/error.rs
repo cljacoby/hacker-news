@@ -35,6 +35,8 @@ pub enum HnError {
     ArgumentError(Option<&'static str>),
     // Error due to inability to Serialize or Deserialize data with respect to a type.
     SerializationError(Option<&'static str>),
+    // Error converting a non top level item into a listing, i.e. a Comment or PollOption.
+    ListingError(Option<&'static str>),
     // HACK: catch all variant
     Unknown,
 }
@@ -70,6 +72,10 @@ impl Display for HnError {
                 Some(msg) => write!(f, "Failed to serialize/deseralize data structure. {}.", msg),
                 None => write!(f, "Failed to serialize/deseralize data structure."),
             },
+            HnError::ListingError(msg) => match msg {
+                Some(msg) => write!(f, "Failed to convert item to top level listing. {}.", msg),
+                None => write!(f, "Failed to convert item to top level listing."),
+            },
             HnError::Unknown => {
                 write!(f, "uknown error.")
             }
@@ -86,6 +92,7 @@ impl HnError {
             HnError::NetworkError(_source) => "NetworkErr",
             HnError::ArgumentError(_msg) => "ArgumentError",
             HnError::SerializationError(_msg) => "SerializationError",
+            HnError::ListingError(_msg) => "ListingError",
             HnError::Unknown => "Unknown",
         }
     }

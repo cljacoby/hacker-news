@@ -1,4 +1,4 @@
-use crate::client::HnClient;
+use crate::client::Client;
 use clap::App;
 use clap::ArgMatches;
 use clap::SubCommand;
@@ -7,7 +7,7 @@ use crate::cli::HnCommand;
 use crate::error::HnError;
 
 // TODO: Should put item -> story conversion within Client code
-use crate::model::firebase::{Item, Story};
+use crate::api::{Item, Story};
 
 /// Get front page listings of Hacker News.
 pub struct News;
@@ -20,7 +20,7 @@ impl HnCommand for News {
     }
 
     async fn cmd(_matches: &ArgMatches<'_>) -> Result<(), Box<HnError>> {
-        let hn_client = HnClient::new();
+        let hn_client = Client::new();
         let top = hn_client.top_stories().await.unwrap();
         let stories: Vec<Story> = hn_client
             .items(&top[..30])
@@ -38,7 +38,7 @@ impl HnCommand for News {
             println!(
                 "{id}|{title}|{by}",
                 id = story.id,
-                title = story.title.unwrap(),
+                title = story.title,
                 by = story.by.unwrap()
             );
         }

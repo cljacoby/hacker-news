@@ -1,4 +1,9 @@
-use super::*;
+use serde::{Serialize, Deserialize};
+
+pub mod derived;
+
+pub type Score = u64;
+pub type Id = u64;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -16,8 +21,6 @@ pub struct User {
     submitted: Option<Vec<Id>>,
 }
 
-// TODO: This is essentially a Listing, at least with respect to what it represents in the data
-// model. There should be some sort of unification in the API.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Job {
     /// The item's unique id.
@@ -42,8 +45,6 @@ pub struct Job {
     pub title: String,
 }
 
-// TODO: This is essentially a Listing, at least with respect to what it represents in the data
-// model. There should be some sort of unification in the API.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Story {
     /// The item's unique id.
@@ -65,9 +66,11 @@ pub struct Story {
     /// The story's score, or the votes for a pollopt.
     pub score: Option<Score>,
     /// The title of the story, poll or job.
-    pub title: Option<String>,
+    pub title: String,
     /// The URL of the story.
     pub url: Option<String>,
+    /// The comment, story or poll text. HTML.
+    pub text: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -116,7 +119,7 @@ pub struct Poll {
     /// The story's score, or the votes for a pollopt.
     pub score: Option<Score>,
     /// The title of the story, poll or job.
-    pub title: Option<String>,
+    pub title: String,
     /// The comment, story or poll text. HTML.
     pub text: Option<String>,
 }
@@ -159,33 +162,63 @@ pub enum Item {
 }
 
 impl Item {
-    pub fn kids(&self) -> &Option<Vec<Id>> {
-        match self {
-            Self::Job(x) => &x.kids,
-            Self::Story(x) => &x.kids,
-            Self::Comment(x) => &x.kids,
-            Self::Poll(x) => &x.kids,
-            Self::PollOption(x) => &x.kids,
-        }
-    }
-
     pub fn id(&self) -> Id {
         match self {
-            Self::Job(x) => x.id,
-            Self::Story(x) => x.id,
-            Self::Comment(x) => x.id,
-            Self::Poll(x) => x.id,
-            Self::PollOption(x) => x.id,
+            Item::Job(j) => j.id,
+            Item::Story(s) => s.id,
+            Item::Comment(c) => c.id,
+            Item::Poll(p) => p.id,
+            Item::PollOption(po) => po.id,
         }
     }
 
     pub fn deleted(&self) -> bool {
         match self {
-            Self::Job(x) => x.deleted,
-            Self::Story(x) => x.deleted,
-            Self::Comment(x) => x.deleted,
-            Self::Poll(x) => x.deleted,
-            Self::PollOption(x) => x.deleted,
+            Item::Job(j) => j.deleted,
+            Item::Story(s) => s.deleted,
+            Item::Comment(c) => c.deleted,
+            Item::Poll(p) => p.deleted,
+            Item::PollOption(po) => po.deleted,
+        }
+    }
+
+    pub fn by(&self) -> Option<&str> {
+        match self {
+            Item::Job(j) => j.by.as_deref(),
+            Item::Story(s) => s.by.as_deref(),
+            Item::Comment(c) => c.by.as_deref(),
+            Item::Poll(p) => p.by.as_deref(),
+            Item::PollOption(po) => po.by.as_deref(),
+        }
+    }
+
+    pub fn time(&self) -> u64 {
+        match self {
+            Item::Job(j) => j.time,
+            Item::Story(s) => s.time,
+            Item::Comment(c) => c.time,
+            Item::Poll(p) => p.time,
+            Item::PollOption(po) => po.time,
+        }
+    }
+
+    pub fn dead(&self) -> bool {
+        match self {
+            Item::Job(j) => j.dead,
+            Item::Story(s) => s.dead,
+            Item::Comment(c) => c.dead,
+            Item::Poll(p) => p.dead,
+            Item::PollOption(po) => po.dead,
+        }
+    }
+
+    pub fn kids(&self) -> Option<&[Id]> {
+        match self {
+            Item::Job(j) => j.kids.as_deref(),
+            Item::Story(s) => s.kids.as_deref(),
+            Item::Comment(c) => c.kids.as_deref(),
+            Item::Poll(p) => p.kids.as_deref(),
+            Item::PollOption(po) => po.kids.as_deref(),
         }
     }
 }
@@ -221,12 +254,13 @@ impl Item {
 #[cfg(test)]
 mod tests {
 
-    use super::firebase::Item;
-    use super::firebase::Story;
+    use super::Item;
+    use super::Story;
 
     #[test]
     fn test_item_type() {
-        let story = Item::Story(Story { id: 27476206,
+        let story = Item::Story(Story {
+            id: 27476206,
             deleted: false,
             by: Some("what_ever".to_string()),
             time: 1623432780,
@@ -234,8 +268,9 @@ mod tests {
             kids: Some(vec![27488169, 27478163, 27488195, 27477211, 27488706, 27477425, 27477221, 27489125, 27490162, 27489280, 27487982, 27479605, 27490009, 27488234, 27491642, 27489141, 27477380, 27489264]),
             descendants: Some(314),
             score: Some(529),
-            title: Some("Apple admits it ranked its Files app ahead of competitor Dropbox".to_string()),
-            url: Some("https://www.theverge.com/2021/6/11/22528701/apple-rank-own-app-over-competitor-files-dropbox-wwdc-2017".to_string())
+            title: "Apple admits it ranked its Files app ahead of competitor Dropbox".to_string(),
+            url: Some("https://www.theverge.com/2021/6/11/22528701/apple-rank-own-app-over-competitor-files-dropbox-wwdc-2017".to_string()),
+            text: None,
         });
 
         assert!(story.is_story());
