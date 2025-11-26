@@ -38,7 +38,7 @@ impl HnCommand for News {
             println!(
                 "{id}|{title}|{by}",
                 id = story.id,
-                title = story.title.unwrap(),
+                title = story.title,
                 by = story.by.unwrap()
             );
         }

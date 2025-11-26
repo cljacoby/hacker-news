@@ -1,5 +1,6 @@
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
+
+pub mod derived;
 
 pub type Score = u64;
 pub type Id = u64;
@@ -65,9 +66,11 @@ pub struct Story {
     /// The story's score, or the votes for a pollopt.
     pub score: Option<Score>,
     /// The title of the story, poll or job.
-    pub title: Option<String>,
+    pub title: String,
     /// The URL of the story.
     pub url: Option<String>,
+    /// The comment, story or poll text. HTML.
+    pub text: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -116,7 +119,7 @@ pub struct Poll {
     /// The story's score, or the votes for a pollopt.
     pub score: Option<Score>,
     /// The title of the story, poll or job.
-    pub title: Option<String>,
+    pub title: String,
     /// The comment, story or poll text. HTML.
     pub text: Option<String>,
 }
@@ -217,20 +220,6 @@ impl Item {
             Item::Poll(p) => p.kids.as_deref(),
             Item::PollOption(po) => po.kids.as_deref(),
         }
-    }
-
-
-    // todo: kind of a hack. not all item types have the same fields,
-    // and some have titles and some don't. what I think maybe would be better
-    // is some sort of type like Listing which I can add a TryFrom from Item.
-    pub fn title(&self) -> Option<&str> {
-        match self {
-            Item::Job(j) => Some(j.title.as_ref()),
-            Item::Story(s) => s.title.as_deref(),
-            Item::Comment(_) => None,
-            Item::Poll(p) => p.title.as_deref(),
-            Item::PollOption(_) => None,
-        } 
     }
 }
 
