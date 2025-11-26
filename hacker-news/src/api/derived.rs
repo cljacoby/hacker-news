@@ -1,7 +1,7 @@
 
 use serde::{Serialize, Deserialize};
 
-use crate::api::{Id, Item};
+use crate::api::{Id, Item, Score};
 use crate::error::HnError;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,6 +26,8 @@ pub struct Listing {
     pub url: Option<String>,
     /// The title of the story, poll or job.
     pub title: String,
+    /// The Listing's score.
+    pub score: Option<Score>,
 }
 
 impl TryFrom<Item> for Listing {
@@ -43,6 +45,7 @@ impl TryFrom<Item> for Listing {
                 text: j.text,
                 url: j.url,
                 title: j.title,
+                score: None,
             }),
             Item::Story(s) => Ok(Listing {
                 id: s.id,
@@ -54,6 +57,7 @@ impl TryFrom<Item> for Listing {
                 text: s.text,
                 url: s.url,
                 title: s.title,
+                score: s.score,
             }),
             Item::Comment(_) => Err(HnError::ListingError(Some("A Comment cannot be a top level listing"))),
             Item::Poll(p) => Ok(Listing {
@@ -66,6 +70,7 @@ impl TryFrom<Item> for Listing {
                 text: p.text,
                 url: None,
                 title: p.title,
+                score: p.score,
             }),
             Item::PollOption(_) =>  Err(HnError::ListingError(Some("A PollOption cannot be a top level listing"))),
         }
