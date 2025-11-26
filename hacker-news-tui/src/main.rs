@@ -5,7 +5,7 @@ use hacker_news::client::Client;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout},
-    text::{Line, Text},
+    text::Line,
     widgets::{Block, BorderType, Borders, Cell, Padding, Row, Table},
     DefaultTerminal, Frame,
 };

@@ -259,7 +259,8 @@ mod tests {
 
     #[test]
     fn test_item_type() {
-        let story = Item::Story(Story { id: 27476206,
+        let story = Item::Story(Story {
+            id: 27476206,
             deleted: false,
             by: Some("what_ever".to_string()),
             time: 1623432780,
@@ -267,8 +268,9 @@ mod tests {
             kids: Some(vec![27488169, 27478163, 27488195, 27477211, 27488706, 27477425, 27477221, 27489125, 27490162, 27489280, 27487982, 27479605, 27490009, 27488234, 27491642, 27489141, 27477380, 27489264]),
             descendants: Some(314),
             score: Some(529),
-            title: Some("Apple admits it ranked its Files app ahead of competitor Dropbox".to_string()),
-            url: Some("https://www.theverge.com/2021/6/11/22528701/apple-rank-own-app-over-competitor-files-dropbox-wwdc-2017".to_string())
+            title: "Apple admits it ranked its Files app ahead of competitor Dropbox".to_string(),
+            url: Some("https://www.theverge.com/2021/6/11/22528701/apple-rank-own-app-over-competitor-files-dropbox-wwdc-2017".to_string()),
+            text: None,
         });
 
         assert!(story.is_story());
