@@ -1,8 +1,8 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-pub type Score = u32;
-pub type Id = u32;
+pub type Score = u64;
+pub type Id = u64;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -20,8 +20,6 @@ pub struct User {
     submitted: Option<Vec<Id>>,
 }
 
-// TODO: This is essentially a Listing, at least with respect to what it represents in the data
-// model. There should be some sort of unification in the API.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Job {
     /// The item's unique id.
@@ -46,8 +44,6 @@ pub struct Job {
     pub title: String,
 }
 
-// TODO: This is essentially a Listing, at least with respect to what it represents in the data
-// model. There should be some sort of unification in the API.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Story {
     /// The item's unique id.
@@ -163,34 +159,78 @@ pub enum Item {
 }
 
 impl Item {
-    pub fn kids(&self) -> &Option<Vec<Id>> {
-        match self {
-            Self::Job(x) => &x.kids,
-            Self::Story(x) => &x.kids,
-            Self::Comment(x) => &x.kids,
-            Self::Poll(x) => &x.kids,
-            Self::PollOption(x) => &x.kids,
-        }
-    }
-
     pub fn id(&self) -> Id {
         match self {
-            Self::Job(x) => x.id,
-            Self::Story(x) => x.id,
-            Self::Comment(x) => x.id,
-            Self::Poll(x) => x.id,
-            Self::PollOption(x) => x.id,
+            Item::Job(j) => j.id,
+            Item::Story(s) => s.id,
+            Item::Comment(c) => c.id,
+            Item::Poll(p) => p.id,
+            Item::PollOption(po) => po.id,
         }
     }
 
     pub fn deleted(&self) -> bool {
         match self {
-            Self::Job(x) => x.deleted,
-            Self::Story(x) => x.deleted,
-            Self::Comment(x) => x.deleted,
-            Self::Poll(x) => x.deleted,
-            Self::PollOption(x) => x.deleted,
+            Item::Job(j) => j.deleted,
+            Item::Story(s) => s.deleted,
+            Item::Comment(c) => c.deleted,
+            Item::Poll(p) => p.deleted,
+            Item::PollOption(po) => po.deleted,
         }
+    }
+
+    pub fn by(&self) -> Option<&str> {
+        match self {
+            Item::Job(j) => j.by.as_deref(),
+            Item::Story(s) => s.by.as_deref(),
+            Item::Comment(c) => c.by.as_deref(),
+            Item::Poll(p) => p.by.as_deref(),
+            Item::PollOption(po) => po.by.as_deref(),
+        }
+    }
+
+    pub fn time(&self) -> u64 {
+        match self {
+            Item::Job(j) => j.time,
+            Item::Story(s) => s.time,
+            Item::Comment(c) => c.time,
+            Item::Poll(p) => p.time,
+            Item::PollOption(po) => po.time,
+        }
+    }
+
+    pub fn dead(&self) -> bool {
+        match self {
+            Item::Job(j) => j.dead,
+            Item::Story(s) => s.dead,
+            Item::Comment(c) => c.dead,
+            Item::Poll(p) => p.dead,
+            Item::PollOption(po) => po.dead,
+        }
+    }
+
+    pub fn kids(&self) -> Option<&[Id]> {
+        match self {
+            Item::Job(j) => j.kids.as_deref(),
+            Item::Story(s) => s.kids.as_deref(),
+            Item::Comment(c) => c.kids.as_deref(),
+            Item::Poll(p) => p.kids.as_deref(),
+            Item::PollOption(po) => po.kids.as_deref(),
+        }
+    }
+
+
+    // todo: kind of a hack. not all item types have the same fields,
+    // and some have titles and some don't. what I think maybe would be better
+    // is some sort of type like Listing which I can add a TryFrom from Item.
+    pub fn title(&self) -> Option<&str> {
+        match self {
+            Item::Job(j) => Some(j.title.as_ref()),
+            Item::Story(s) => s.title.as_deref(),
+            Item::Comment(_) => None,
+            Item::Poll(p) => p.title.as_deref(),
+            Item::PollOption(_) => None,
+        } 
     }
 }
 
